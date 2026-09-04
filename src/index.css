@@ -1,0 +1,49 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-100 text-slate-800 antialiased font-sans;
+  }
+}
+
+/* Custom styles for 80mm Thermal Receipt Printer */
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 2mm;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  .screen-only {
+    display: none !important;
+  }
+
+  .thermal-receipt-container {
+    display: block !important;
+    width: 76mm !important;
+    margin: 0 auto !important;
+    padding: 2mm 0 !important;
+    font-family: 'Courier New', Courier, monospace !important;
+    font-size: 11px !important;
+    line-height: 1.25 !important;
+    color: #000000 !important;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+}
+
+@media screen {
+  .thermal-receipt-container {
+    display: none;
+  }
+}

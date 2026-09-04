@@ -1,0 +1,17 @@
+services:
+  yrn-kasa:
+    build: .
+    container_name: yrn-kasa-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - DATA_DIR=/app/data
+    volumes:
+      - yrn_kasa_data:/app/data
+
+volumes:
+  yrn_kasa_data:
+    driver: local
