@@ -84,51 +84,64 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
           </h3>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {posCihazlari.map((device, idx) => (
-              <div
-                key={device.id || idx}
-                className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 hover:border-amber-200 transition-all flex flex-col justify-between"
-              >
-                <div className="flex items-center justify-between mb-2">
-                  <input
-                    type="text"
-                    value={device.name}
-                    onChange={(e) => handleDeviceChange(idx, 'name', e.target.value)}
-                    className="text-xs font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 outline-none px-0.5 py-0.5"
-                  />
-                  <button
-                    onClick={() => handleRemoveDevice(idx)}
-                    className="text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors"
-                    title="Cihazı Kaldır"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
-                </div>
+            {posCihazlari.map((device, idx) => {
+              const deviceTotal = num(device.nakit) + num(device.krediKarti);
+              return (
+                <div
+                  key={device.id || idx}
+                  className="p-3 bg-slate-50 rounded-xl border border-slate-200/70 hover:border-amber-200 transition-all flex flex-col justify-between"
+                >
+                  <div className="flex items-center justify-between mb-2 gap-2">
+                    <input
+                      type="text"
+                      value={device.name}
+                      onChange={(e) => handleDeviceChange(idx, 'name', e.target.value)}
+                      className="text-xs font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 outline-none px-0.5 py-0.5 flex-1 min-w-0 truncate"
+                    />
 
-                <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Nakit Fişi (TL)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={device.nakit ?? 0}
-                      onChange={(e) => handleDeviceChange(idx, 'nakit', e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
-                    />
+                    {/* İki kutunun toplamı (Nakit + Kredi Kartı) */}
+                    <div className="flex items-center space-x-1.5 flex-shrink-0">
+                      <span
+                        className="text-[11px] font-extrabold text-amber-950 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap"
+                        title="Bu cihazdaki Nakit Fişi + Kredi Kartı Toplamı"
+                      >
+                        Toplam: {formatCurrency(deviceTotal)}
+                      </span>
+                      <button
+                        onClick={() => handleRemoveDevice(idx)}
+                        className="text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors"
+                        title="Cihazı Kaldır"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Kredi Kartı (TL)</label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={device.krediKarti ?? 0}
-                      onChange={(e) => handleDeviceChange(idx, 'krediKarti', e.target.value)}
-                      className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
-                    />
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Nakit Fişi (TL)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={device.nakit ?? 0}
+                        onChange={(e) => handleDeviceChange(idx, 'nakit', e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Kredi Kartı (TL)</label>
+                      <input
+                        type="number"
+                        step="any"
+                        value={device.krediKarti ?? 0}
+                        onChange={(e) => handleDeviceChange(idx, 'krediKarti', e.target.value)}
+                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
+                      />
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
 
