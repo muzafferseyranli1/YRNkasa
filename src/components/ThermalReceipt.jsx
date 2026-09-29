@@ -27,6 +27,9 @@ export default function ThermalReceipt({ date, data, metrics }) {
     }
   };
 
+  const nakitGiderToplam = metrics.nakitHarcamalar ?? metrics.toplamHarcamalar;
+  const kkGiderToplam = metrics.kkHarcamalar ?? 0;
+
   return (
     <div className="thermal-receipt-container text-black bg-white select-none">
       {/* 1. BAŞLIK */}
@@ -64,8 +67,8 @@ export default function ThermalReceipt({ date, data, metrics }) {
             <span>{formatCurrency(suitablePos.nakit)}</span>
           </div>
           <div className="flex justify-between">
-            <span>Toplam Gider (Çıkış):</span>
-            <span>-{formatCurrency(metrics.toplamHarcamalar)}</span>
+            <span>Kasa Nakit Çıkışı (Gider):</span>
+            <span>-{formatCurrency(nakitGiderToplam)}</span>
           </div>
         </div>
 
@@ -179,18 +182,36 @@ export default function ThermalReceipt({ date, data, metrics }) {
           </div>
           <div className="space-y-1 text-sm font-bold">
             {harcamalar.map((h, i) => (
-              <div key={i} className="flex justify-between">
+              <div key={i} className="flex justify-between items-center">
                 <span className="truncate max-w-[200px]">
+                  {h.isKK && <span className="font-black mr-1">[KK]</span>}
                   {h.title} {h.aciklama ? `(${h.aciklama})` : ''}:
                 </span>
-                <span className="font-black">{formatCurrency(h.tutar)}</span>
+                <span className="font-black">
+                  {formatCurrency(h.tutar)}
+                  {h.isKK && <span className="text-xs font-semibold ml-1">(KK)</span>}
+                </span>
               </div>
             ))}
           </div>
+
           <div className="border-t-2 border-black my-1.5"></div>
-          <div className="flex justify-between text-sm font-black">
-            <span>TOPLAM GİDER:</span>
-            <span className="text-base font-black">{formatCurrency(metrics.toplamHarcamalar)}</span>
+
+          <div className="space-y-0.5 text-xs font-bold">
+            <div className="flex justify-between">
+              <span>Kasadan Çıkan Nakit Gider:</span>
+              <span className="font-black">{formatCurrency(nakitGiderToplam)}</span>
+            </div>
+            {kkGiderToplam > 0 && (
+              <div className="flex justify-between text-black">
+                <span>Kredi Kartı ile Yapılan [KK]:</span>
+                <span className="font-black">{formatCurrency(kkGiderToplam)} (Harici)</span>
+              </div>
+            )}
+            <div className="flex justify-between text-sm font-black pt-1 border-t border-black">
+              <span>TOPLAM GİDER (Nakit+KK):</span>
+              <span className="text-base font-black">{formatCurrency(metrics.toplamHarcamalar)}</span>
+            </div>
           </div>
         </div>
       )}

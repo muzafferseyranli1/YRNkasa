@@ -56,19 +56,23 @@ export const calculateReportMetrics = (data) => {
   // 3. Toplam Ciro / Satış
   const toplamSatis = dengePosToplam + suitablePosToplam;
 
-  // 4. Harcamalar Toplamı
-  const toplamHarcamalar = (harcamalar || []).reduce(
-    (acc, item) => acc + num(item.tutar),
-    0
-  );
+  // 4. Harcamalar (Nakit vs KK Ayrımı)
+  const harcamalarList = harcamalar || [];
+  const nakitHarcamalar = harcamalarList
+    .filter((item) => !item.isKK)
+    .reduce((acc, item) => acc + num(item.tutar), 0);
+  const kkHarcamalar = harcamalarList
+    .filter((item) => !!item.isKK)
+    .reduce((acc, item) => acc + num(item.tutar), 0);
+  const toplamHarcamalar = nakitHarcamalar + kkHarcamalar;
 
-  // 5. Kasa Nakit Akışı & Hesaplanan Nakit
+  // 5. Kasa Nakit Akışı & Hesaplanan Nakit (Yalnızca Kasadan çıkan Nakit Harcamalar düşülür!)
   const devir = num(kasaGiris.devir);
   const kasayaParaKondu = num(kasaGiris.kasayaParaKondu);
   const satisNakitToplam = num(dengePos.nakit) + num(suitablePos.nakit);
 
   const toplamNakitGiris = devir + kasayaParaKondu + satisNakitToplam;
-  const hesaplananNakit = toplamNakitGiris - toplamHarcamalar;
+  const hesaplananNakit = toplamNakitGiris - nakitHarcamalar;
   const fizikiSayim = num(fizikiKasa);
   const kasaFarki = fizikiSayim - hesaplananNakit; // Negatif ise eksik, pozitif ise fazla
 
@@ -131,6 +135,8 @@ export const calculateReportMetrics = (data) => {
     suitablePosToplam,
     toplamSatis,
     toplamHarcamalar,
+    nakitHarcamalar,
+    kkHarcamalar,
     toplamNakitGiris,
     hesaplananNakit,
     fizikiSayim,
@@ -201,12 +207,11 @@ export const getDefaultReportData = (devir = 0) => ({
     setcard: 0,
   },
   harcamalar: [
-    { id: 'h_1', title: 'Nakit Çıkışı', tutar: 0, aciklama: 'bankaya yatırıldı' },
-    { id: 'h_2', title: 'Yakıt Alımı', tutar: 0, aciklama: '' },
-    { id: 'h_3', title: 'Market Alışverişi', tutar: 0, aciklama: '' },
-    { id: 'h_4', title: 'Hammadde Alımı', tutar: 0, aciklama: '' },
+    { id: 'h_1', title: 'Nakit Çıkışı', tutar: 0, aciklama: 'bankaya yatırıldı', isKK: false },
+    { id: 'h_2', title: 'Yakıt Alımı', tutar: 0, aciklama: '', isKK: false },
+    { id: 'h_3', title: 'Market Alışverişi', tutar: 0, aciklama: '', isKK: false },
+    { id: 'h_4', title: 'Hammadde Alımı', tutar: 0, aciklama: '', isKK: false },
   ],
   fizikiKasa: 0,
   notlar: '',
 });
-
