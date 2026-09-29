@@ -12,7 +12,14 @@
 @media print {
   @page {
     size: 80mm auto;
-    margin: 2mm;
+    margin: 1mm 2mm;
+  }
+
+  *, *:before, *:after {
+    color: #000000 !important;
+    text-shadow: none !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 
   body {
@@ -20,6 +27,8 @@
     color: #000000 !important;
     margin: 0 !important;
     padding: 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    -webkit-font-smoothing: antialiased !important;
   }
 
   .screen-only {
@@ -28,12 +37,14 @@
 
   .thermal-receipt-container {
     display: block !important;
-    width: 76mm !important;
+    width: 72mm !important;
+    max-width: 72mm !important;
     margin: 0 auto !important;
-    padding: 2mm 0 !important;
-    font-family: 'Courier New', Courier, monospace !important;
-    font-size: 11px !important;
-    line-height: 1.25 !important;
+    padding: 2mm 0 8mm 0 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
+    font-size: 13px !important;
+    font-weight: 700 !important;
+    line-height: 1.35 !important;
     color: #000000 !important;
   }
 
