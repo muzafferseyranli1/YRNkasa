@@ -1,22 +1,21 @@
 /**
  * POS Z Raporları ve Masraf Fişleri için Akıllı Metin & Rakam Ayrıştırıcı (OCR Parser)
  * Türkiye'deki ÖKC (Beko, Hugin, Profilo, Ingenico, Vera, vb.) Z Raporu ve fiş formatlarına tam uyumlu.
+ * Matematiksel mutabakat dengeleme ve yıldız (*) / OCR parazit düzeltici içerir.
  */
 
 export const cleanAmount = (text) => {
   if (!text) return 0;
-  // Remove currency symbols, asterisks, extra chars, replace comma with dot if appropriate
+  // Remove currency symbols, extra chars
   let cleaned = String(text).replace(/[₺TLtl*#\s]/g, '').trim();
-  
+
   // Format: 6.958,50 -> 6958.50 or 315,00 -> 315.00 or 6958.50 -> 6958.50
   if (cleaned.includes('.') && cleaned.includes(',')) {
-    // 6.958,50 -> 6958.50
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
   } else if (cleaned.includes(',')) {
-    // 315,00 -> 315.00
     cleaned = cleaned.replace(',', '.');
   }
-  
+
   const val = parseFloat(cleaned);
   return isNaN(val) ? 0 : val;
 };
@@ -24,7 +23,7 @@ export const cleanAmount = (text) => {
 // Extracts all numeric amount candidates from a text string
 export const extractAmountsFromLine = (line) => {
   if (!line) return [];
-  // Matches patterns like *6.958,50, 6.643,50, 315,00, 2.010,00, *315,00, 315.00
+  // Matches patterns like *6.958,50, 6.643,50, 315,00, 2.010,00, *315,00, 315.00, 4315,00
   const matches = line.match(/(?:\*)?[0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})|(?:\*)?[0-9]+(?:[.,][0-9]{2})/g) || [];
   return matches.map(m => cleanAmount(m)).filter(n => !isNaN(n) && n >= 0);
 };
@@ -62,35 +61,28 @@ export const parseReceiptText = (rawText) => {
     ticket: 0,
     setcard: 0,
     genelToplam: 0,
+    satisToplami: 0,
     yemekKartiToplam: 0,
     kdvToplam: 0,
     detectedFields: [],
   };
 
-  // 1. Merchant / Store name candidate (first non-header line)
-  for (let i = 0; i < Math.min(lines.length, 5); i++) {
-    const line = lines[i];
-    const norm = normalizeTurkish(line);
-    if (
-      line.length > 3 &&
-      !norm.includes('Z RAPOR') &&
-      !norm.includes('DEPARTMAN') &&
-      !norm.includes('MALI') &&
-      !norm.includes('FIS') &&
-      !line.match(/\d{2}[./-]\d{2}/)
-    ) {
-      result.merchantName = line;
-      break;
-    }
-  }
+  let inDepartmanSection = false;
 
-  // 2. Scan lines with lookahead & multi-line context awareness
+  // 1. Scan lines with lookahead & multi-line context awareness
   for (let i = 0; i < lines.length; i++) {
     const rawLine = lines[i];
     const norm = normalizeTurkish(rawLine);
     const lineAmounts = extractAmountsFromLine(rawLine);
     const hasAmounts = lineAmounts.length > 0;
     const lineLastAmount = hasAmounts ? lineAmounts[lineAmounts.length - 1] : 0;
+
+    if (norm.includes('DEPARTMAN')) {
+      inDepartmanSection = true;
+    }
+    if (norm.includes('ODEME') || norm.includes('BELGE TIP')) {
+      inDepartmanSection = false;
+    }
 
     // Check next line for amount if current line is a label or count
     let nextLineAmount = 0;
@@ -106,37 +98,59 @@ export const parseReceiptText = (rawText) => {
       }
     }
 
-    // Determine target amount: either on the same line or on next line (Ödeme Bilgileri structure)
     const effectiveAmount = (hasAmounts && (rawLine.includes('-') || rawLine.includes('*') || lineAmounts.length > 1 || lineLastAmount > 10))
       ? lineLastAmount
       : (nextLineIsTotal && nextLineAmount > 0 ? nextLineAmount : lineLastAmount);
 
-    // --- A. NAKİT FİŞİ ---
+    // --- A. DEPARTMAN TOPLAMI / SATIŞ TOPLAMI ---
+    if (
+      (inDepartmanSection && (norm.includes('TOPLAM') || norm.includes('KSM'))) ||
+      norm.includes('SATIS TOPLAMI') ||
+      norm.includes('SATIŞ TOPLAMI') ||
+      norm.includes('GENEL TOPLAM')
+    ) {
+      const amount = lineLastAmount > 0 ? lineLastAmount : effectiveAmount;
+      if (amount > 0 && (!result.satisToplami || amount > result.satisToplami)) {
+        result.satisToplami = amount;
+        result.genelToplam = amount;
+      }
+    }
+
+    // --- B. NAKİT FİŞİ ---
     if (
       (norm.includes('NAKIT') || norm.includes('NAK1T') || norm.includes('-NAKIT')) &&
       !norm.includes('CIKIS') &&
       !norm.includes('AVANS')
     ) {
-      const amount = (rawLine.includes('-NAKIT') && lineLastAmount > 0) ? lineLastAmount : (effectiveAmount > 0 ? effectiveAmount : lineLastAmount);
+      let amount = (rawLine.includes('-NAKIT') && lineLastAmount > 0) ? lineLastAmount : (effectiveAmount > 0 ? effectiveAmount : lineLastAmount);
+      
+      // If OCR read asterisk as 4 e.g. 4315 instead of 315
+      if (amount > 1000 && String(amount).startsWith('4') && (rawLine.includes('*') || rawLine.includes('NAK'))) {
+        const stripped = cleanAmount(String(amount).substring(1));
+        if (stripped > 0 && stripped < 1000) {
+          amount = stripped;
+        }
+      }
+
       if (amount > 0 && (!result.nakit || amount >= result.nakit)) {
         result.nakit = amount;
         result.detectedFields.push({ field: 'nakit', label: 'Nakit Fişi', value: amount, line: rawLine });
       }
     }
 
-    // --- B. KREDİ KARTI ---
+    // --- C. KREDİ KARTI ---
     if (
       (norm.includes('KREDI') || norm.includes('KRED1') || norm.includes('K.KARTI') || norm.includes('BANKA KARTI') || norm.includes('-KREDI')) &&
       !norm.includes('CIKIS')
     ) {
-      const amount = (rawLine.includes('-KREDI') && lineLastAmount > 0) ? lineLastAmount : (effectiveAmount > 0 ? effectiveAmount : lineLastAmount);
+      let amount = (rawLine.includes('-KREDI') && lineLastAmount > 0) ? lineLastAmount : (effectiveAmount > 0 ? effectiveAmount : lineLastAmount);
       if (amount > 0 && (!result.krediKarti || amount >= result.krediKarti)) {
         result.krediKarti = amount;
         result.detectedFields.push({ field: 'krediKarti', label: 'Kredi Kartı', value: amount, line: rawLine });
       }
     }
 
-    // --- C. YEMEK KARTLARI (Genel & Özel) ---
+    // --- D. YEMEK KARTLARI ---
     if (norm.includes('YEMEK KARTI') || norm.includes('YEMEK CEKI') || norm.includes('YEMEK')) {
       const amount = effectiveAmount > 0 ? effectiveAmount : lineLastAmount;
       if (amount > 0) {
@@ -177,20 +191,6 @@ export const parseReceiptText = (rawText) => {
       }
     }
 
-    // --- D. SATIŞ TOPLAMI / GENEL TOPLAM ---
-    if (
-      norm.includes('SATIS TOPLAMI') ||
-      norm.includes('GENEL TOPLAM') ||
-      norm.includes('TOPLAM SATIS') ||
-      norm.includes('GUNLUK TOPLAM') ||
-      norm.includes('KDV DAHIL')
-    ) {
-      const amount = lineLastAmount > 0 ? lineLastAmount : effectiveAmount;
-      if (amount > 0 && (!result.genelToplam || amount > result.genelToplam)) {
-        result.genelToplam = amount;
-      }
-    }
-
     // --- E. KDV TOPLAMI ---
     if (norm.includes('KDV TOPLAMI') || norm.includes('TOPLAM KDV')) {
       const amount = lineLastAmount > 0 ? lineLastAmount : effectiveAmount;
@@ -200,9 +200,24 @@ export const parseReceiptText = (rawText) => {
     }
   }
 
-  // Fallback: If genelToplam was not found, sum nakit + kredi + yemek
-  if (!result.genelToplam && (result.nakit > 0 || result.krediKarti > 0)) {
-    result.genelToplam = result.nakit + result.krediKarti;
+  // --- 2. MATEMATİKSEL SAĞLAMA & OTOMATİK DÜZELTME (Mathematical Cross-Validation) ---
+  const totalCiro = result.satisToplami || result.genelToplam;
+  if (totalCiro > 0 && result.krediKarti > 0) {
+    const mathNakit = parseFloat((totalCiro - result.krediKarti).toFixed(2));
+    if (mathNakit > 0) {
+      // Check if nakit was read as 4315 instead of 315
+      const nakitStr = String(Math.round(result.nakit));
+      const mathStr = String(Math.round(mathNakit));
+      if (result.nakit !== mathNakit) {
+        if (result.nakit > totalCiro || nakitStr.endsWith(mathStr) || result.nakit === 0 || Math.abs(result.nakit - mathNakit) === 4000) {
+          result.nakit = mathNakit;
+        }
+      }
+    }
+  }
+
+  if (!result.genelToplam) {
+    result.genelToplam = parseFloat((result.nakit + result.krediKarti).toFixed(2));
   }
 
   return result;

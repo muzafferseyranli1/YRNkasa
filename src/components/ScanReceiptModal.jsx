@@ -27,18 +27,33 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
     setProgressText('Görsel optimize ediliyor (Kontrast artırılıyor)...');
 
     try {
-      // 1. Preprocess image on canvas (high-contrast grayscale for thermal receipts)
-      const preprocessedBlob = await preprocessImageForOcr(file);
+      let rawRecognizedText = '';
 
-      // 2. Initialize Tesseract OCR worker
-      setProgressText('Karakterler ve rakamlar taranıyor (OCR)...');
-      const worker = await createWorker('tur+eng');
-      
-      const ret = await worker.recognize(preprocessedBlob);
-      await worker.terminate();
+      // Check if running on Android with Native Google ML Kit OCR
+      const NativeOcr = window.Capacitor?.Plugins?.NativeOcr;
+      if (NativeOcr) {
+        setProgressText('Google ML Kit ile taranıyor...');
+        // Convert file to Base64
+        const reader = new FileReader();
+        const base64Promise = new Promise((resolve) => {
+          reader.onload = (re) => resolve(re.target.result);
+          reader.readAsDataURL(file);
+        });
+        const base64Data = await base64Promise;
+        const res = await NativeOcr.recognizeText({ base64: base64Data });
+        rawRecognizedText = res.text || '';
+      } else {
+        // Web fallback: Preprocess image on canvas + Tesseract OCR
+        const preprocessedBlob = await preprocessImageForOcr(file);
+        setProgressText('Karakterler ve rakamlar taranıyor (OCR)...');
+        const worker = await createWorker('tur+eng');
+        const ret = await worker.recognize(preprocessedBlob);
+        await worker.terminate();
+        rawRecognizedText = ret.data.text || '';
+      }
 
       setProgressText('Mali alanlar ve tutarlar ayrıştırılıyor...');
-      const extracted = parseReceiptText(ret.data.text);
+      const extracted = parseReceiptText(rawRecognizedText);
       setParsedData(extracted);
 
       // Pre-select detected values
