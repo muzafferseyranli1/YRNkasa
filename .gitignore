@@ -7,3 +7,6 @@ data/
 .env.local
 .DS_Store
 Thumbs.db
+resim/
+urun_gorselleri/
+pos_*.html

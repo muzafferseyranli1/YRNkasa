@@ -1,0 +1,279 @@
+import React, { useState, useRef } from 'react';
+import { Camera, Upload, X, Check, Loader2, Sparkles, AlertCircle, FileText } from 'lucide-react';
+import { createWorker } from 'tesseract.js';
+import { parseReceiptText } from '../utils/ocrParser';
+import { formatCurrency } from '../utils/calculations';
+
+export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos', title = 'Fiş / Z Raporu Tara' }) {
+  const [imagePreview, setImagePreview] = useState(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [progressText, setProgressText] = useState('');
+  const [parsedData, setParsedData] = useState(null);
+  const [selectedFields, setSelectedFields] = useState({});
+  const fileInputRef = useRef(null);
+
+  if (!isOpen) return null;
+
+  const handleFileChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const previewUrl = URL.createObjectURL(file);
+    setImagePreview(previewUrl);
+    setParsedData(null);
+    setIsProcessing(true);
+    setProgressText('Görsel taranıyor (OCR başlatılıyor)...');
+
+    try {
+      const worker = await createWorker('tur+eng');
+      setProgressText('Karakterler ve rakamlar tanınıyor...');
+      const ret = await worker.recognize(file);
+      await worker.terminate();
+
+      setProgressText('Mali alanlar ayrıştırılıyor...');
+      const extracted = parseReceiptText(ret.data.text);
+      setParsedData(extracted);
+
+      // Pre-select detected non-zero fields
+      const defaults = {};
+      if (mode === 'pos') {
+        if (extracted.nakit > 0) defaults.nakit = extracted.nakit;
+        if (extracted.krediKarti > 0) defaults.krediKarti = extracted.krediKarti;
+        if (extracted.sodexho > 0) defaults.sodexho = extracted.sodexho;
+        if (extracted.multinet > 0) defaults.multinet = extracted.multinet;
+        if (extracted.ticket > 0) defaults.ticket = extracted.ticket;
+        if (extracted.setcard > 0) defaults.setcard = extracted.setcard;
+      } else if (mode === 'expense') {
+        defaults.title = extracted.merchantName || 'Gider Fişi';
+        defaults.tutar = extracted.genelToplam || extracted.nakit || 0;
+      }
+      setSelectedFields(defaults);
+    } catch (err) {
+      console.error('OCR Error:', err);
+      alert('Görsel okunurken bir hata oluştu: ' + err.message);
+    } finally {
+      setIsProcessing(false);
+      setProgressText('');
+    }
+  };
+
+  const handleApply = () => {
+    if (onApply) {
+      onApply(selectedFields, imagePreview);
+    }
+    handleClose();
+  };
+
+  const handleClose = () => {
+    setImagePreview(null);
+    setParsedData(null);
+    setSelectedFields({});
+    setIsProcessing(false);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-xs screen-only">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[90vh] shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
+          <div className="flex items-center space-x-2.5">
+            <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
+              <Camera className="w-5 h-5" />
+            </div>
+            <div>
+              <h2 className="text-base font-bold text-slate-900">{title}</h2>
+              <p className="text-xs text-slate-500">Kameradan veya galeriden fişi otomatik okutun</p>
+            </div>
+          </div>
+          <button
+            onClick={handleClose}
+            className="p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-200 rounded-lg transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 overflow-y-auto space-y-4">
+          {!imagePreview ? (
+            <div className="border-2 border-dashed border-slate-300 rounded-2xl p-8 text-center bg-slate-50 hover:bg-blue-50/50 hover:border-blue-400 transition-all cursor-pointer">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                capture="environment"
+                onChange={handleFileChange}
+                className="hidden"
+              />
+              <div
+                onClick={() => fileInputRef.current?.click()}
+                className="flex flex-col items-center justify-center space-y-3"
+              >
+                <div className="p-4 bg-blue-100 text-blue-600 rounded-2xl shadow-sm">
+                  <Camera className="w-8 h-8" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800">
+                    Fotoğraf Çek veya Fiş Görseli Seç
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Telefonunuzun kamerasını fişe tutun, rakamlar otomatik okunsun
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
+                >
+                  Kamerayı Aç / Dosya Seç
+                </button>
+              </div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Image & Status Row */}
+              <div className="flex flex-col sm:flex-row items-center gap-4 p-3 bg-slate-50 rounded-xl border border-slate-200">
+                <img
+                  src={imagePreview}
+                  alt="Taranan Fiş"
+                  className="h-28 w-28 object-cover rounded-lg border border-slate-300 shadow-xs"
+                />
+                <div className="flex-1 text-center sm:text-left">
+                  {isProcessing ? (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-center sm:justify-start space-x-2 text-blue-600 font-bold text-xs">
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>{progressText}</span>
+                      </div>
+                      <div className="w-full bg-slate-200 h-1.5 rounded-full overflow-hidden">
+                        <div className="bg-blue-600 h-full w-2/3 animate-pulse"></div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex items-center space-x-1.5 text-emerald-600 font-bold text-xs">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Fiş Başarıyla Ayrıştırıldı</span>
+                      </div>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        Aşağıda tespit edilen alanları kontrol edip forma aktarın.
+                      </p>
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="mt-2 text-xs font-semibold text-blue-600 hover:underline inline-block"
+                      >
+                        Yeniden Fotoğraf Çek
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Parsed Fields Preview & Confirmation */}
+              {parsedData && !isProcessing && (
+                <div className="space-y-3 pt-2">
+                  <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
+                    Tespit Edilen Değerler
+                  </h3>
+
+                  {mode === 'pos' && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      {/* Nakit Fişi */}
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
+                        <span className="text-[11px] font-semibold text-slate-500">Nakit Fişi</span>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <input
+                            type="number"
+                            step="any"
+                            value={selectedFields.nakit ?? 0}
+                            onChange={(e) =>
+                              setSelectedFields({ ...selectedFields, nakit: Number(e.target.value) || 0 })
+                            }
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                          />
+                          <span className="text-xs text-slate-400 font-medium">₺</span>
+                        </div>
+                      </div>
+
+                      {/* Kredi Kartı */}
+                      <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
+                        <span className="text-[11px] font-semibold text-slate-500">Kredi Kartı Z</span>
+                        <div className="flex items-center space-x-2 mt-1">
+                          <input
+                            type="number"
+                            step="any"
+                            value={selectedFields.krediKarti ?? 0}
+                            onChange={(e) =>
+                              setSelectedFields({ ...selectedFields, krediKarti: Number(e.target.value) || 0 })
+                            }
+                            className="w-full bg-white border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                          />
+                          <span className="text-xs text-slate-400 font-medium">₺</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {mode === 'expense' && (
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Gider / Firma Adı
+                        </label>
+                        <input
+                          type="text"
+                          value={selectedFields.title || ''}
+                          onChange={(e) =>
+                            setSelectedFields({ ...selectedFields, title: e.target.value })
+                          }
+                          placeholder="Örn: Petrol Ofisi, Market vb."
+                          className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-xs font-bold text-slate-800 focus:bg-white outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 mb-1">
+                          Toplam Fiş Tutarı
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="number"
+                            step="any"
+                            value={selectedFields.tutar ?? 0}
+                            onChange={(e) =>
+                              setSelectedFields({ ...selectedFields, tutar: Number(e.target.value) || 0 })
+                            }
+                            className="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2 text-sm font-black text-rose-700 focus:bg-white outline-none"
+                          />
+                          <span className="absolute right-3 top-2 text-xs text-slate-400 font-medium">₺</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="flex items-center justify-end space-x-3 px-6 py-3.5 border-t border-slate-100 bg-slate-50">
+          <button
+            onClick={handleClose}
+            className="px-4 py-2 text-xs font-semibold text-slate-600 hover:text-slate-800 hover:bg-slate-200 rounded-xl transition-colors"
+          >
+            İptal
+          </button>
+          <button
+            onClick={handleApply}
+            disabled={!parsedData || isProcessing}
+            className="flex items-center space-x-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-slate-300 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-blue-200"
+          >
+            <Check className="w-4 h-4" />
+            <span>Bilgileri Forma Aktar</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

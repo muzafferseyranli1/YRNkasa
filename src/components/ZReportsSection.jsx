@@ -1,8 +1,10 @@
-import React from 'react';
-import { ReceiptText, Plus, Trash2, Smartphone, CreditCard } from 'lucide-react';
+import React, { useState } from 'react';
+import { ReceiptText, Plus, Trash2, Smartphone, CreditCard, Camera, Sparkles } from 'lucide-react';
 import { formatCurrency, num } from '../utils/calculations';
+import ScanReceiptModal from './ScanReceiptModal';
 
 export default function ZReportsSection({ zBilgileri = {}, onChange }) {
+  const [activeScanTarget, setActiveScanTarget] = useState(null); // { type: 'pos', index: 0 } or { type: 'meal' }
   const posCihazlari = zBilgileri.posCihazlari || [];
 
   const handleDeviceChange = (index, field, value) => {
@@ -38,6 +40,35 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
       ...zBilgileri,
       [field]: value === '' ? '' : Number(value) || 0,
     });
+  };
+
+  // Apply OCR scanned results
+  const handleScanApply = (parsed) => {
+    if (!activeScanTarget) return;
+
+    if (activeScanTarget.type === 'pos') {
+      const idx = activeScanTarget.index;
+      const nextDevices = [...posCihazlari];
+      nextDevices[idx] = {
+        ...nextDevices[idx],
+        nakit: parsed.nakit || nextDevices[idx].nakit || 0,
+        krediKarti: parsed.krediKarti || nextDevices[idx].krediKarti || 0,
+      };
+      onChange({
+        ...zBilgileri,
+        posCihazlari: nextDevices,
+      });
+    } else if (activeScanTarget.type === 'meal') {
+      onChange({
+        ...zBilgileri,
+        sodexho: parsed.sodexho || zBilgileri.sodexho || 0,
+        multinet: parsed.multinet || zBilgileri.multinet || 0,
+        ticket: parsed.ticket || zBilgileri.ticket || 0,
+        setcard: parsed.setcard || zBilgileri.setcard || 0,
+      });
+    }
+
+    setActiveScanTarget(null);
   };
 
   const totalKesilenNakit = posCihazlari.reduce((acc, d) => acc + num(d.nakit), 0);
@@ -99,7 +130,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
                       className="text-xs font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 outline-none px-0.5 py-0.5 flex-1 min-w-0 truncate"
                     />
 
-                    {/* İki kutunun toplamı (Nakit + Kredi Kartı) */}
+                    {/* İki kutunun toplamı (Nakit + Kredi Kartı) ve OCR Kamera Butonu */}
                     <div className="flex items-center space-x-1.5 flex-shrink-0">
                       <span
                         className="text-[11px] font-extrabold text-amber-950 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap"
@@ -107,6 +138,16 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
                       >
                         Toplam: {formatCurrency(deviceTotal)}
                       </span>
+
+                      <button
+                        type="button"
+                        onClick={() => setActiveScanTarget({ type: 'pos', index: idx })}
+                        className="p-1 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                        title="Bu POS için Z Raporunu Kameradan Oku"
+                      >
+                        <Camera className="w-3.5 h-3.5" />
+                      </button>
+
                       <button
                         onClick={() => handleRemoveDevice(idx)}
                         className="text-slate-400 hover:text-rose-500 p-1 rounded-md transition-colors"
@@ -147,10 +188,21 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
 
         {/* Yemek Kartları Fiziki Z */}
         <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-1.5">
-            <CreditCard className="w-4 h-4" />
-            <span>Yemek Kartları Fiziki Z</span>
-          </h3>
+          <div className="flex items-center justify-between">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-1.5">
+              <CreditCard className="w-4 h-4" />
+              <span>Yemek Kartları Fiziki Z</span>
+            </h3>
+            <button
+              type="button"
+              onClick={() => setActiveScanTarget({ type: 'meal' })}
+              className="flex items-center space-x-1 px-2 py-0.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[11px] font-bold transition-colors"
+              title="Yemek kartı sliplerini kameradan tara"
+            >
+              <Camera className="w-3 h-3" />
+              <span>Slip Tara</span>
+            </button>
+          </div>
 
           <div className="space-y-2.5">
             <div>
@@ -199,6 +251,15 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
           </div>
         </div>
       </div>
+
+      {/* OCR Z Raporu Tarayıcı Modal */}
+      <ScanReceiptModal
+        isOpen={!!activeScanTarget}
+        onClose={() => setActiveScanTarget(null)}
+        mode={activeScanTarget?.type === 'meal' ? 'meal' : 'pos'}
+        title={activeScanTarget?.type === 'meal' ? 'Yemek Kartı Slipi Tara (OCR)' : 'Z Raporu / Fiş Tara (OCR)'}
+        onApply={handleScanApply}
+      />
     </div>
   );
 }
