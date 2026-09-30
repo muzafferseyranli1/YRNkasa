@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">YRN Kasa</string>
+    <string name="title_activity_main">YRN Kasa</string>
+    <string name="package_name">com.yrn.kasa</string>
+    <string name="custom_url_scheme">com.yrn.kasa</string>
+</resources>

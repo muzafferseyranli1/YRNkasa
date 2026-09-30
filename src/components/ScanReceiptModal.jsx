@@ -1,8 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Check, Loader2, Sparkles, AlertCircle, FileText } from 'lucide-react';
+import { Camera, Upload, X, Check, Loader2, Sparkles, AlertCircle, FileText, ChevronDown, ChevronUp } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import { parseReceiptText } from '../utils/ocrParser';
 import { formatCurrency } from '../utils/calculations';
+import { preprocessImageForOcr } from '../utils/imagePreprocess';
 
 export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos', title = 'Fiş / Z Raporu Tara' }) {
   const [imagePreview, setImagePreview] = useState(null);
@@ -10,6 +11,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
   const [progressText, setProgressText] = useState('');
   const [parsedData, setParsedData] = useState(null);
   const [selectedFields, setSelectedFields] = useState({});
+  const [showRawText, setShowRawText] = useState(false);
   const fileInputRef = useRef(null);
 
   if (!isOpen) return null;
@@ -22,23 +24,29 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
     setImagePreview(previewUrl);
     setParsedData(null);
     setIsProcessing(true);
-    setProgressText('Görsel taranıyor (OCR başlatılıyor)...');
+    setProgressText('Görsel optimize ediliyor (Kontrast artırılıyor)...');
 
     try {
+      // 1. Preprocess image on canvas (high-contrast grayscale for thermal receipts)
+      const preprocessedBlob = await preprocessImageForOcr(file);
+
+      // 2. Initialize Tesseract OCR worker
+      setProgressText('Karakterler ve rakamlar taranıyor (OCR)...');
       const worker = await createWorker('tur+eng');
-      setProgressText('Karakterler ve rakamlar tanınıyor...');
-      const ret = await worker.recognize(file);
+      
+      const ret = await worker.recognize(preprocessedBlob);
       await worker.terminate();
 
-      setProgressText('Mali alanlar ayrıştırılıyor...');
+      setProgressText('Mali alanlar ve tutarlar ayrıştırılıyor...');
       const extracted = parseReceiptText(ret.data.text);
       setParsedData(extracted);
 
-      // Pre-select detected non-zero fields
+      // Pre-select detected values
       const defaults = {};
       if (mode === 'pos') {
         if (extracted.nakit > 0) defaults.nakit = extracted.nakit;
         if (extracted.krediKarti > 0) defaults.krediKarti = extracted.krediKarti;
+        if (extracted.yemekKartiToplam > 0) defaults.yemekKarti = extracted.yemekKartiToplam;
         if (extracted.sodexho > 0) defaults.sodexho = extracted.sodexho;
         if (extracted.multinet > 0) defaults.multinet = extracted.multinet;
         if (extracted.ticket > 0) defaults.ticket = extracted.ticket;
@@ -68,6 +76,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
     setImagePreview(null);
     setParsedData(null);
     setSelectedFields({});
+    setShowRawText(false);
     setIsProcessing(false);
     onClose();
   };
@@ -118,7 +127,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                     Fotoğraf Çek veya Fiş Görseli Seç
                   </h3>
                   <p className="text-xs text-slate-500 mt-1">
-                    Telefonunuzun kamerasını fişe tutun, rakamlar otomatik okunsun
+                    Telefonunuzun kamerasını fişe tutun, Nakit / Kredi Kartı / Yemek rakamları otomatik dolsun
                   </p>
                 </div>
                 <button
@@ -156,7 +165,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                         <span>Fiş Başarıyla Ayrıştırıldı</span>
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Aşağıda tespit edilen alanları kontrol edip forma aktarın.
+                        Aşağıda tespit edilen alanları kontrol edip forma aktarabilirsiniz.
                       </p>
                       <button
                         onClick={() => fileInputRef.current?.click()}
@@ -173,7 +182,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
               {parsedData && !isProcessing && (
                 <div className="space-y-3 pt-2">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400">
-                    Tespit Edilen Değerler
+                    Tespit Edilen Değerler (Düzenlenebilir)
                   </h3>
 
                   {mode === 'pos' && (
@@ -211,6 +220,25 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                           <span className="text-xs text-slate-400 font-medium">₺</span>
                         </div>
                       </div>
+
+                      {/* Yemek Kartı Toplamı (Varsa) */}
+                      {(parsedData.yemekKartiToplam > 0 || parsedData.sodexho > 0 || parsedData.multinet > 0) && (
+                        <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 flex flex-col justify-between col-span-1 sm:col-span-2">
+                          <span className="text-[11px] font-semibold text-amber-700">Yemek Kartı / Diğer Z</span>
+                          <div className="flex items-center space-x-2 mt-1">
+                            <input
+                              type="number"
+                              step="any"
+                              value={selectedFields.yemekKarti ?? parsedData.yemekKartiToplam ?? 0}
+                              onChange={(e) =>
+                                setSelectedFields({ ...selectedFields, yemekKarti: Number(e.target.value) || 0 })
+                              }
+                              className="w-full bg-white border border-amber-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                            />
+                            <span className="text-xs text-amber-600 font-medium">₺</span>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
 
@@ -250,6 +278,24 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                       </div>
                     </div>
                   )}
+
+                  {/* Okunan Ham OCR Metni (İnceleme amaçlı) */}
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setShowRawText(!showRawText)}
+                      className="text-[11px] text-slate-500 hover:text-slate-800 flex items-center gap-1 font-medium"
+                    >
+                      <FileText className="w-3.5 h-3.5" />
+                      <span>{showRawText ? 'Ham OCR Metnini Gizle' : 'Taranan Metni İncele'}</span>
+                      {showRawText ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+                    </button>
+                    {showRawText && (
+                      <pre className="mt-2 p-2.5 bg-slate-100 text-slate-700 rounded-lg text-[10px] font-mono whitespace-pre-wrap max-h-36 overflow-y-auto border border-slate-200">
+                        {parsedData.rawText}
+                      </pre>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

@@ -1,0 +1,20 @@
+{
+  "appId": "com.yrn.kasa",
+  "appName": "YRN Kasa",
+  "webDir": "dist",
+  "server": {
+    "url": "http://188.132.198.144:3002",
+    "cleartext": true,
+    "androidScheme": "http"
+  },
+  "android": {
+    "allowMixedContent": true,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": true
+  },
+  "plugins": {
+    "Camera": {
+      "permissions": ["camera", "photos"]
+    }
+  }
+}
