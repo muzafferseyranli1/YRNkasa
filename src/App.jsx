@@ -3,7 +3,6 @@ import { Toaster, toast } from 'react-hot-toast';
 import Header from './components/Header';
 import KasaDevirSection from './components/KasaDevirSection';
 import PosSalesSection from './components/PosSalesSection';
-import PanelsSection from './components/PanelsSection';
 import ZReportsSection from './components/ZReportsSection';
 import ExpensesSection from './components/ExpensesSection';
 import FizikiKasaSection from './components/FizikiKasaSection';
@@ -167,25 +166,19 @@ export default function App() {
               onChangeSuitable={(newSuitable) => updateData({ suitablePos: newSuitable })}
             />
 
-            {/* 4. Panel Bilgileri */}
-            <PanelsSection
-              paneller={data.paneller}
-              onChange={(newPanels) => updateData({ paneller: newPanels })}
-            />
-
-            {/* 5. Z Bilgileri (POS Cihazları & Yemek Kartları) */}
+            {/* 4. Z Bilgileri (POS Cihazları & Yemek Kartları) */}
             <ZReportsSection
               zBilgileri={data.zBilgileri}
               onChange={(newZ) => updateData({ zBilgileri: newZ })}
             />
 
-            {/* 6. Harcamalar & Kasa Çıkışları */}
+            {/* 5. Harcamalar & Kasa Çıkışları */}
             <ExpensesSection
               harcamalar={data.harcamalar}
               onChange={(newHarcamalar) => updateData({ harcamalar: newHarcamalar })}
             />
 
-            {/* 7. Gün Sonu Fiziki Kasa Sayımı & Devir Uyarısı */}
+            {/* 6. Gün Sonu Fiziki Kasa Sayımı & Devir Uyarısı */}
             <FizikiKasaSection
               fizikiKasa={data.fizikiKasa}
               hesaplananNakit={metrics?.hesaplananNakit || 0}

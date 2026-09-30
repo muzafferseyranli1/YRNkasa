@@ -4,7 +4,6 @@ import {
   Banknote,
   Receipt,
   CreditCard,
-  Layers,
   UtensilsCrossed,
   CheckCircle2,
   AlertCircle,
@@ -26,12 +25,6 @@ export default function SummaryCards({ metrics }) {
     hesaplananKrediKarti = 0,
     fizikiKrediKarti = 0,
     krediKartiFarki = 0,
-    panelSiparisTutari = 0,
-    suitablePosToplam = 0,
-    panelPosTutarFarki = 0,
-    panelSiparisSayisi = 0,
-    posPaketSiparisSayisi = 0,
-    siparisSayisiFarki = 0,
     yemekKartlari = {},
   } = metrics;
 
@@ -110,13 +103,13 @@ export default function SummaryCards({ metrics }) {
         </div>
       </div>
 
-      {/* Detaylı Mutabakat Panelleri */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Fiş & Kredi Kartı Mutabakatı */}
+      {/* 2 Detaylı Mutabakat Paneli */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* 1. Fiş & Kredi Kartı Mutabakatı */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center space-x-1.5">
             <Receipt className="w-4 h-4 text-slate-600" />
-            <span>Mali Fiş & Z Mutabakatı</span>
+            <span>Mali Fiş & POS Z Mutabakatı</span>
           </h3>
           <div className="space-y-2 text-xs">
             <div className="flex justify-between py-1 border-b border-slate-100">
@@ -149,44 +142,7 @@ export default function SummaryCards({ metrics }) {
           </div>
         </div>
 
-        {/* Panel vs POS Mutabakatı */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center space-x-1.5">
-            <Layers className="w-4 h-4 text-purple-600" />
-            <span>Panel vs POS Karşılaştırması</span>
-          </h3>
-          <div className="space-y-2 text-xs">
-            <div className="flex justify-between py-1 border-b border-slate-100">
-              <span className="text-slate-500">Panel Toplam Ciro:</span>
-              <span className="font-bold text-purple-700">{formatCurrency(panelSiparisTutari)}</span>
-            </div>
-            <div className="flex justify-between py-1 border-b border-slate-100">
-              <span className="text-slate-500">POS Paket Toplam Ciro:</span>
-              <span className="font-bold text-slate-800">{formatCurrency(suitablePosToplam)}</span>
-            </div>
-            <div className={`flex justify-between py-1 px-2 rounded-lg font-bold ${panelPosTutarFarki === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
-              <span>Ciro Farkı:</span>
-              <span>{formatCurrency(panelPosTutarFarki)}</span>
-            </div>
-
-            <div className="pt-2">
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500">Panel Sipariş Sayısı:</span>
-                <span className="font-bold text-slate-800">{formatNumber(panelSiparisSayisi)} Adet</span>
-              </div>
-              <div className="flex justify-between py-1 border-b border-slate-100">
-                <span className="text-slate-500">POS Sipariş Sayısı:</span>
-                <span className="font-bold text-slate-800">{formatNumber(posPaketSiparisSayisi)} Adet</span>
-              </div>
-              <div className={`flex justify-between py-1 px-2 rounded-lg font-bold mt-1 ${siparisSayisiFarki === 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
-                <span>Adet Farkı:</span>
-                <span>{siparisSayisiFarki === 0 ? '✓ Sayılar Tutuyor' : `${siparisSayisiFarki} Adet Fark`}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Yemek Kartları Mutabakatı */}
+        {/* 2. Yemek Kartları Mutabakatı */}
         <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center space-x-1.5">
             <UtensilsCrossed className="w-4 h-4 text-emerald-600" />
@@ -197,15 +153,15 @@ export default function SummaryCards({ metrics }) {
               const name = key.charAt(0).toUpperCase() + key.slice(1);
               const isOk = item.fark === 0;
               return (
-                <div key={key} className="p-1.5 bg-slate-50 rounded-lg flex items-center justify-between">
+                <div key={key} className="p-2 bg-slate-50 rounded-lg flex items-center justify-between">
                   <div>
-                    <span className="font-bold text-slate-800 block">{name}</span>
+                    <span className="font-bold text-slate-800 block text-xs">{name}</span>
                     <span className="text-[10px] text-slate-400">
-                      Sistem: {formatCurrency(item.hesaplanan)} | Fiziki: {formatCurrency(item.fiziki)}
+                      Sistem: {formatCurrency(item.hesaplanan)} | Fiziki Z: {formatCurrency(item.fiziki)}
                     </span>
                   </div>
                   <div className="text-right">
-                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${isOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${isOk ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}`}>
                       {isOk ? '✓ Tam' : `${formatCurrency(item.fark)}`}
                     </span>
                   </div>
