@@ -9,7 +9,6 @@ export const cleanAmount = (text) => {
     .replace(/[₺TLtl*#~|=©<>[\]\s]/gi, '')
     .trim();
 
-  // If format is like 10.290,66 or 649.83
   if (cleaned.includes('.') && cleaned.includes(',')) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
   } else if (cleaned.includes(',')) {
@@ -24,16 +23,12 @@ export const cleanAmount = (text) => {
 export const extractAmountsFromLine = (rawLine) => {
   if (!rawLine) return [];
 
-  // 1. Normalize space-separated decimals: e.g. "4315 00" -> "4315,00"
   let line = rawLine.replace(/(\d+)\s+(\d{2})(?!\d)/g, '$1,$2');
-
-  // 2. Matches patterns like 10.290,66, 7393.93, 649.83, 0,00, 315,00, *6.958,50, ~ 4315,00
   const matches = line.match(/(?:[~*#])?[0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})|(?:[~*#])?[0-9]+(?:[.,][0-9]{2})/g) || [];
 
   const amounts = [];
   for (let m of matches) {
     let amt = cleanAmount(m);
-    // If OCR misread leading asterisk '*' or '~' as '4' (e.g. ~ 4315,00 -> 315.00)
     if (amt >= 4000 && amt < 5000 && (rawLine.includes('~') || rawLine.includes('*') || rawLine.includes('TOPLAM') || rawLine.includes('NAK'))) {
       const stripped = amt - 4000;
       if (stripped > 0 && stripped < 1000) {
@@ -72,7 +67,6 @@ export const parseReceiptText = (rawText, targetMode = 'auto') => {
 
   const fullNormalized = normalizeTurkish(rawText);
 
-  // Auto-detect receipt format if not specified
   const isSuitablePos =
     targetMode === 'suitable' ||
     fullNormalized.includes('SUITABLE') ||
@@ -106,9 +100,10 @@ export const parseReceiptText = (rawText, targetMode = 'auto') => {
     detectedFields: [],
   };
 
-  // --- SUITABLE POS PARSING ---
+  // ==========================================
+  // 1. SUITABLE POS PARSING
+  // ==========================================
   if (isSuitablePos) {
-    // 1. Calculate total order count from lines like "Trendyol (1 sipariş)", "Yemeksepeti (7 sipariş)", "SuitableGO (5 sipariş)"
     let totalOrders = 0;
     const orderMatches = rawText.matchAll(/(\d+)\s*sipari[sş]/gi);
     for (const match of orderMatches) {
@@ -134,33 +129,39 @@ export const parseReceiptText = (rawText, targetMode = 'auto') => {
         inGenelOdeme = false;
       }
 
-      // Inside Genel Ödeme section
-      if (inGenelOdeme) {
+      // Next line amount lookup if line has label but no amount
+      let amt = lineLastAmount;
+      if (amt === 0 && i + 1 < lines.length) {
+        const nextAmounts = extractAmountsFromLine(lines[i + 1]);
+        if (nextAmounts.length > 0) amt = nextAmounts[nextAmounts.length - 1];
+      }
+
+      // Inside Genel Ödeme block (or prioritized fallback)
+      if (inGenelOdeme || (!result.onlineKrediKarti && !result.krediKarti && !result.nakit)) {
         if (norm.includes('ONLINE') || norm.includes('ONL1NE')) {
-          result.onlineKrediKarti = lineLastAmount;
-          result.detectedFields.push({ field: 'onlineKrediKarti', label: 'Online Kredi Kartı', value: lineLastAmount, line: rawLine });
-        } else if (norm.includes('KREDI') || norm.includes('KRED1') || norm.includes('K.KARTI')) {
-          result.krediKarti = lineLastAmount;
-          result.detectedFields.push({ field: 'krediKarti', label: 'Kredi Kartı', value: lineLastAmount, line: rawLine });
+          if (amt > 0) {
+            result.onlineKrediKarti = amt;
+            result.detectedFields.push({ field: 'onlineKrediKarti', label: 'Online Kredi Kartı', value: amt, line: rawLine });
+          }
+        } else if ((norm.includes('KREDI') || norm.includes('KRED1') || norm.includes('K.KARTI')) && !norm.includes('ONLINE')) {
+          if (amt > 0) {
+            result.krediKarti = amt;
+            result.detectedFields.push({ field: 'krediKarti', label: 'Kredi Kartı', value: amt, line: rawLine });
+          }
         } else if (norm.includes('NAKIT') || norm.includes('NAK1T')) {
-          result.nakit = lineLastAmount;
-          result.detectedFields.push({ field: 'nakit', label: 'Nakit', value: lineLastAmount, line: rawLine });
+          result.nakit = amt;
+          result.detectedFields.push({ field: 'nakit', label: 'Nakit', value: amt, line: rawLine });
         } else if (norm.includes('SODEX') || norm.includes('PLUXEE')) {
-          result.sodexho = lineLastAmount;
-          result.detectedFields.push({ field: 'sodexho', label: 'Sodexho', value: lineLastAmount, line: rawLine });
+          if (amt > 0) result.sodexho = amt;
         } else if (norm.includes('MULTI')) {
-          result.multinet = lineLastAmount;
-          result.detectedFields.push({ field: 'multinet', label: 'Multinet', value: lineLastAmount, line: rawLine });
+          if (amt > 0) result.multinet = amt;
         } else if (norm.includes('TICKET') || norm.includes('EDENRED')) {
-          result.ticket = lineLastAmount;
-          result.detectedFields.push({ field: 'ticket', label: 'Ticket', value: lineLastAmount, line: rawLine });
+          if (amt > 0) result.ticket = amt;
         } else if (norm.includes('SETCARD') || norm.includes('SET CARD')) {
-          result.setcard = lineLastAmount;
-          result.detectedFields.push({ field: 'setcard', label: 'Setcard', value: lineLastAmount, line: rawLine });
+          if (amt > 0) result.setcard = amt;
         }
       }
 
-      // Genel Toplam
       if (norm.includes('GENEL TOPLAM') || norm.includes('ARA TOPLAM')) {
         if (lineLastAmount > 0) result.genelToplam = lineLastAmount;
       }
@@ -175,9 +176,19 @@ export const parseReceiptText = (rawText, targetMode = 'auto') => {
     return result;
   }
 
-  // --- DENGE POS ("Sistem Satış Balans Raporu") PARSING ---
+  // ==========================================
+  // 2. DENGE POS ("Sistem Satış Balans Raporu") PARSING
+  // ==========================================
   if (isDengePos) {
     let inOdemeSection = false;
+
+    // Collect all positive amounts in the text
+    const foundAmounts = [];
+    lines.forEach((l) => {
+      extractAmountsFromLine(l).forEach((a) => {
+        foundAmounts.push(a);
+      });
+    });
 
     for (let i = 0; i < lines.length; i++) {
       const rawLine = lines[i];
@@ -187,41 +198,52 @@ export const parseReceiptText = (rawText, targetMode = 'auto') => {
 
       if (norm === 'ODEME' || norm.startsWith('ODEME ') || norm.endsWith(' ODEME')) {
         inOdemeSection = true;
-        continue;
       }
 
-      if (inOdemeSection && (norm.includes('ACIK CEKLER') || norm.includes('GERCEK GELIR') || norm.includes('ODEMELER TOPLAMI') || norm.includes('DIGER'))) {
-        if (norm.includes('ODEMELER TOPLAMI') || norm.includes('GERCEK GELIR')) {
-          if (lineLastAmount > 0) result.genelToplam = lineLastAmount;
-        }
-        if (norm.includes('ACIK CEKLER')) {
-          inOdemeSection = false;
-        }
+      // Next line amount lookup
+      let nextAmt = 0;
+      if (i + 1 < lines.length) {
+        const nextAmts = extractAmountsFromLine(lines[i + 1]);
+        if (nextAmts.length > 0) nextAmt = nextAmts[nextAmts.length - 1];
       }
 
-      if (inOdemeSection) {
-        if (norm.includes('NAKIT') || norm.includes('NAK1T')) {
+      const effectiveAmt = lineAmounts.length > 0 ? lineLastAmount : nextAmt;
+
+      if (norm.includes('KREDI') || norm.includes('KRED1') || norm.includes('K.KARTI')) {
+        if (effectiveAmt > 0) {
+          result.krediKarti = effectiveAmt;
+          result.detectedFields.push({ field: 'krediKarti', label: 'Kredi Kartı', value: effectiveAmt, line: rawLine });
+        }
+      } else if (norm.includes('NAKIT') || norm.includes('NAK1T')) {
+        // If line contains 0,00 or next line is 0,00 or general Nakit line
+        if (lineAmounts.length > 0) {
           result.nakit = lineLastAmount;
-          result.detectedFields.push({ field: 'nakit', label: 'Nakit', value: lineLastAmount, line: rawLine });
-        } else if (norm.includes('KREDI') || norm.includes('KRED1') || norm.includes('K.KARTI')) {
-          result.krediKarti = lineLastAmount;
-          result.detectedFields.push({ field: 'krediKarti', label: 'Kredi Kartı', value: lineLastAmount, line: rawLine });
-        } else if (norm.includes('CARI') || norm.includes('CAR1')) {
-          result.cari = lineLastAmount;
-          result.detectedFields.push({ field: 'cari', label: 'Cari', value: lineLastAmount, line: rawLine });
-        } else if (norm.includes('SODEX') || norm.includes('PLUXEE')) {
-          result.sodexho = lineLastAmount;
-          result.detectedFields.push({ field: 'sodexho', label: 'Sodexho', value: lineLastAmount, line: rawLine });
-        } else if (norm.includes('MULTI')) {
-          result.multinet = lineLastAmount;
-          result.detectedFields.push({ field: 'multinet', label: 'Multinet', value: lineLastAmount, line: rawLine });
-        } else if (norm.includes('TICKET') || norm.includes('EDENRED')) {
-          result.ticket = lineLastAmount;
-          result.detectedFields.push({ field: 'ticket', label: 'Ticket', value: lineLastAmount, line: rawLine });
-        } else if (norm.includes('SETCARD') || norm.includes('SET CARD')) {
-          result.setcard = lineLastAmount;
-          result.detectedFields.push({ field: 'setcard', label: 'Setcard', value: lineLastAmount, line: rawLine });
+        } else {
+          result.nakit = 0;
         }
+        result.detectedFields.push({ field: 'nakit', label: 'Nakit', value: result.nakit, line: rawLine });
+      } else if (norm.includes('CARI') || norm.includes('CAR1')) {
+        if (effectiveAmt > 0) result.cari = effectiveAmt;
+      } else if (norm.includes('SODEX') || norm.includes('PLUXEE')) {
+        if (effectiveAmt > 0) result.sodexho = effectiveAmt;
+      } else if (norm.includes('MULTI')) {
+        if (effectiveAmt > 0) result.multinet = effectiveAmt;
+      } else if (norm.includes('TICKET') || norm.includes('EDENRED')) {
+        if (effectiveAmt > 0) result.ticket = effectiveAmt;
+      } else if (norm.includes('SETCARD') || norm.includes('SET CARD')) {
+        if (effectiveAmt > 0) result.setcard = effectiveAmt;
+      } else if (norm.includes('ODEMELER TOPLAMI') || norm.includes('GERCEK GELIR') || norm.includes('NET SATIS')) {
+        if (effectiveAmt > 0 && !result.genelToplam) {
+          result.genelToplam = effectiveAmt;
+        }
+      }
+    }
+
+    // Fallback: If Kredi Karti is still 0 but we found amounts in receipt
+    if (result.krediKarti === 0 && foundAmounts.length > 0) {
+      const topPositive = foundAmounts.find((a) => a > 100);
+      if (topPositive) {
+        result.krediKarti = topPositive;
       }
     }
 
@@ -234,7 +256,9 @@ export const parseReceiptText = (rawText, targetMode = 'auto') => {
     return result;
   }
 
-  // --- GENERAL ÖKC / POS Z RAPORU & MASRAF FİŞİ PARSING ---
+  // ==========================================
+  // 3. GENERAL ÖKC Z RAPORU & MASRAF FİŞİ PARSING
+  // ==========================================
   let inDepartmanSection = false;
 
   for (let i = 0; i < lines.length; i++) {
@@ -295,7 +319,7 @@ export const parseReceiptText = (rawText, targetMode = 'auto') => {
       if (amount >= 4000 && amount < 5000) {
         amount = amount - 4000;
       }
-      if (amount > 0 && (!result.nakit || amount >= result.nakit)) {
+      if (amount >= 0 && (!result.nakit || amount >= result.nakit)) {
         result.nakit = amount;
         result.detectedFields.push({ field: 'nakit', label: 'Nakit Fişi', value: amount, line: rawLine });
       }
