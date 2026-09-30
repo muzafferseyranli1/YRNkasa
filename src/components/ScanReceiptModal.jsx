@@ -1,11 +1,11 @@
 import React, { useState, useRef } from 'react';
-import { Camera, Upload, X, Check, Loader2, Sparkles, AlertCircle, FileText, ChevronDown, ChevronUp } from 'lucide-react';
+import { Camera, Upload, X, Check, Loader2, Sparkles, AlertCircle, FileText, ChevronDown, ChevronUp, Store, ShoppingBag } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
 import { parseReceiptText } from '../utils/ocrParser';
 import { formatCurrency } from '../utils/calculations';
 import { preprocessImageForOcr } from '../utils/imagePreprocess';
 
-export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos', title = 'Fiş / Z Raporu Tara' }) {
+export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos', title = 'Fiş / Rapor Tara' }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [progressText, setProgressText] = useState('');
@@ -24,7 +24,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
     setImagePreview(previewUrl);
     setParsedData(null);
     setIsProcessing(true);
-    setProgressText('Görsel optimize ediliyor (Kontrast artırılıyor)...');
+    setProgressText('Görsel optimize ediliyor...');
 
     try {
       let rawRecognizedText = '';
@@ -33,7 +33,6 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
       const NativeOcr = window.Capacitor?.Plugins?.NativeOcr;
       if (NativeOcr) {
         setProgressText('Google ML Kit ile taranıyor...');
-        // Convert file to Base64
         const reader = new FileReader();
         const base64Promise = new Promise((resolve) => {
           reader.onload = (re) => resolve(re.target.result);
@@ -53,12 +52,29 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
       }
 
       setProgressText('Mali alanlar ve tutarlar ayrıştırılıyor...');
-      const extracted = parseReceiptText(rawRecognizedText);
+      const extracted = parseReceiptText(rawRecognizedText, mode);
       setParsedData(extracted);
 
-      // Pre-select detected values
+      // Pre-select detected values according to mode
       const defaults = {};
-      if (mode === 'pos') {
+      if (mode === 'denge') {
+        defaults.nakit = extracted.nakit || 0;
+        defaults.krediKarti = extracted.krediKarti || 0;
+        defaults.cari = extracted.cari || 0;
+        defaults.sodexho = extracted.sodexho || 0;
+        defaults.multinet = extracted.multinet || 0;
+        defaults.ticket = extracted.ticket || 0;
+        defaults.setcard = extracted.setcard || 0;
+      } else if (mode === 'suitable') {
+        defaults.nakit = extracted.nakit || 0;
+        defaults.krediKarti = extracted.krediKarti || 0;
+        defaults.onlineKrediKarti = extracted.onlineKrediKarti || 0;
+        defaults.sodexho = extracted.sodexho || 0;
+        defaults.multinet = extracted.multinet || 0;
+        defaults.ticket = extracted.ticket || 0;
+        defaults.setcard = extracted.setcard || 0;
+        defaults.paketSiparisSayisi = extracted.paketSiparisSayisi || 0;
+      } else if (mode === 'pos') {
         if (extracted.nakit > 0) defaults.nakit = extracted.nakit;
         if (extracted.krediKarti > 0) defaults.krediKarti = extracted.krediKarti;
         if (extracted.yemekKartiToplam > 0) defaults.yemekKarti = extracted.yemekKartiToplam;
@@ -102,12 +118,17 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 bg-slate-50">
           <div className="flex items-center space-x-2.5">
-            <div className="p-2 bg-blue-100 text-blue-700 rounded-xl">
-              <Camera className="w-5 h-5" />
+            <div className={`p-2 rounded-xl ${mode === 'suitable' ? 'bg-blue-100 text-blue-700' : mode === 'denge' ? 'bg-indigo-100 text-indigo-700' : 'bg-slate-100 text-slate-700'}`}>
+              {mode === 'suitable' ? <ShoppingBag className="w-5 h-5" /> : mode === 'denge' ? <Store className="w-5 h-5" /> : <Camera className="w-5 h-5" />}
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900">{title}</h2>
-              <p className="text-xs text-slate-500">Kameradan veya galeriden fişi otomatik okutun</p>
+              <p className="text-xs text-slate-500">
+                {mode === 'denge' && 'Sistem Satış Balans Raporu (ÖDEME dökümü)'}
+                {mode === 'suitable' && 'Suitable POS Günlük Satış Raporu (Genel Ödeme Yöntemleri)'}
+                {mode === 'pos' && 'ÖKC POS Z Raporu / Gün Sonu'}
+                {mode === 'expense' && 'Masraf ve Fatura Fişi'}
+              </p>
             </div>
           </div>
           <button
@@ -139,17 +160,20 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                 </div>
                 <div>
                   <h3 className="text-sm font-bold text-slate-800">
-                    Fotoğraf Çek veya Fiş Görseli Seç
+                    Fotoğraf Çek veya Rapor Görseli Seç
                   </h3>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Telefonunuzun kamerasını fişe tutun, Nakit / Kredi Kartı / Yemek rakamları otomatik dolsun
+                  <p className="text-xs text-slate-500 mt-1 max-w-md mx-auto">
+                    {mode === 'denge' && 'DengePOS Sistem Satış Balans fişini kameraya tutun, Ödeme kalemleri otomatik doldurulsun.'}
+                    {mode === 'suitable' && 'Suitable POS Günlük Satış Raporu fişini kameraya tutun, Genel Ödeme Yöntemleri ve Sipariş Sayısı otomatik okunsun.'}
+                    {mode === 'pos' && 'POS Z raporunu kameraya tutun, Nakit ve Kredi Kartı rakamları otomatik dolsun.'}
+                    {mode === 'expense' && 'Masraf fişini kameraya tutun, tutar ve firma bilgisi aktarılsın.'}
                   </p>
                 </div>
                 <button
                   type="button"
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold transition-colors shadow-xs"
                 >
-                  Kamerayı Aç / Dosya Seç
+                  Kamerayı Aç / Fiş Seç
                 </button>
               </div>
             </div>
@@ -177,10 +201,10 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                     <div>
                       <div className="flex items-center space-x-1.5 text-emerald-600 font-bold text-xs">
                         <Sparkles className="w-4 h-4" />
-                        <span>Fiş Başarıyla Ayrıştırıldı</span>
+                        <span>Rapor / Fiş Başarıyla Okundu</span>
                       </div>
                       <p className="text-xs text-slate-500 mt-0.5">
-                        Aşağıda tespit edilen alanları kontrol edip forma aktarabilirsiniz.
+                        Ayrıştırılan değerleri kontrol edip formu tek tıkla doldurabilirsiniz.
                       </p>
                       <button
                         onClick={() => fileInputRef.current?.click()}
@@ -200,9 +224,184 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                     Tespit Edilen Değerler (Düzenlenebilir)
                   </h3>
 
+                  {/* DENGE POS FIELD GRID */}
+                  {mode === 'denge' && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nakit</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.nakit ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, nakit: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Kredi Kartı</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.krediKarti ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, krediKarti: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Cari</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.cari ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, cari: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Sodexho</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.sodexho ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, sodexho: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Multinet</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.multinet ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, multinet: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Ticket</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.ticket ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, ticket: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Setcard</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.setcard ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, setcard: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* SUITABLE POS FIELD GRID */}
+                  {mode === 'suitable' && (
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nakit</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.nakit ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, nakit: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Kredi Kartı</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.krediKarti ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, krediKarti: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div className="bg-blue-50/60 p-2 rounded-lg border border-blue-200">
+                        <label className="block text-[11px] font-bold text-blue-800 mb-1">Online Kredi Kartı</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.onlineKrediKarti ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, onlineKrediKarti: Number(e.target.value) || 0 })}
+                          className="w-full bg-white border border-blue-300 rounded-lg px-2.5 py-1 text-xs font-bold text-blue-900"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Sodexho</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.sodexho ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, sodexho: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Multinet</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.multinet ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, multinet: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Ticket</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.ticket ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, ticket: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Setcard</label>
+                        <input
+                          type="number"
+                          step="any"
+                          value={selectedFields.setcard ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, setcard: Number(e.target.value) || 0 })}
+                          className="w-full bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-xs font-bold text-slate-800"
+                        />
+                      </div>
+
+                      <div className="bg-amber-50/60 p-2 rounded-lg border border-amber-200">
+                        <label className="block text-[11px] font-bold text-amber-800 mb-1">Paket Sipariş Sayısı</label>
+                        <input
+                          type="number"
+                          step="1"
+                          value={selectedFields.paketSiparisSayisi ?? 0}
+                          onChange={(e) => setSelectedFields({ ...selectedFields, paketSiparisSayisi: Number(e.target.value) || 0 })}
+                          className="w-full bg-white border border-amber-300 rounded-lg px-2.5 py-1 text-xs font-bold text-amber-900"
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* POS Z FIELD GRID */}
                   {mode === 'pos' && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      {/* Nakit Fişi */}
                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
                         <span className="text-[11px] font-semibold text-slate-500">Nakit Fişi</span>
                         <div className="flex items-center space-x-2 mt-1">
@@ -219,7 +418,6 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                         </div>
                       </div>
 
-                      {/* Kredi Kartı */}
                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
                         <span className="text-[11px] font-semibold text-slate-500">Kredi Kartı Z</span>
                         <div className="flex items-center space-x-2 mt-1">
@@ -236,7 +434,6 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                         </div>
                       </div>
 
-                      {/* Yemek Kartı Toplamı (Varsa) */}
                       {(parsedData.yemekKartiToplam > 0 || parsedData.sodexho > 0 || parsedData.multinet > 0) && (
                         <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 flex flex-col justify-between col-span-1 sm:col-span-2">
                           <span className="text-[11px] font-semibold text-amber-700">Yemek Kartı / Diğer Z</span>
@@ -257,6 +454,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                     </div>
                   )}
 
+                  {/* EXPENSE FIELD GRID */}
                   {mode === 'expense' && (
                     <div className="space-y-3">
                       <div>
@@ -294,7 +492,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                     </div>
                   )}
 
-                  {/* Okunan Ham OCR Metni (İnceleme amaçlı) */}
+                  {/* Okunan Ham OCR Metni */}
                   <div className="pt-1">
                     <button
                       type="button"

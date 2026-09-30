@@ -1,8 +1,11 @@
-import React from 'react';
-import { Store, ShoppingBag, CreditCard, Banknote, Utensils } from 'lucide-react';
+import React, { useState } from 'react';
+import { Store, ShoppingBag, CreditCard, Banknote, Utensils, Camera, Sparkles } from 'lucide-react';
 import { formatCurrency, num } from '../utils/calculations';
+import ScanReceiptModal from './ScanReceiptModal';
 
 export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, onChangeSuitable }) {
+  const [activeScanModal, setActiveScanModal] = useState(null); // 'denge' | 'suitable' | null
+
   const handleDengeChange = (field, value) => {
     onChangeDenge({
       ...dengePos,
@@ -14,6 +17,33 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
     onChangeSuitable({
       ...suitablePos,
       [field]: value === '' ? '' : Number(value) || 0,
+    });
+  };
+
+  const handleApplyDengeScan = (fields) => {
+    onChangeDenge({
+      ...dengePos,
+      nakit: fields.nakit !== undefined ? fields.nakit : dengePos?.nakit,
+      krediKarti: fields.krediKarti !== undefined ? fields.krediKarti : dengePos?.krediKarti,
+      cari: fields.cari !== undefined ? fields.cari : dengePos?.cari,
+      sodexho: fields.sodexho !== undefined ? fields.sodexho : dengePos?.sodexho,
+      multinet: fields.multinet !== undefined ? fields.multinet : dengePos?.multinet,
+      ticket: fields.ticket !== undefined ? fields.ticket : dengePos?.ticket,
+      setcard: fields.setcard !== undefined ? fields.setcard : dengePos?.setcard,
+    });
+  };
+
+  const handleApplySuitableScan = (fields) => {
+    onChangeSuitable({
+      ...suitablePos,
+      nakit: fields.nakit !== undefined ? fields.nakit : suitablePos?.nakit,
+      krediKarti: fields.krediKarti !== undefined ? fields.krediKarti : suitablePos?.krediKarti,
+      onlineKrediKarti: fields.onlineKrediKarti !== undefined ? fields.onlineKrediKarti : suitablePos?.onlineKrediKarti,
+      sodexho: fields.sodexho !== undefined ? fields.sodexho : suitablePos?.sodexho,
+      multinet: fields.multinet !== undefined ? fields.multinet : suitablePos?.multinet,
+      ticket: fields.ticket !== undefined ? fields.ticket : suitablePos?.ticket,
+      setcard: fields.setcard !== undefined ? fields.setcard : suitablePos?.setcard,
+      paketSiparisSayisi: fields.paketSiparisSayisi !== undefined ? fields.paketSiparisSayisi : suitablePos?.paketSiparisSayisi,
     });
   };
 
@@ -50,9 +80,22 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
                 <p className="text-xs text-slate-500">Şube / Masa Satışları</p>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-[11px] font-medium text-slate-400 block">DengePOS Toplamı</span>
-              <span className="text-base font-bold text-indigo-600">{formatCurrency(dengeTotal)}</span>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => setActiveScanModal('denge')}
+                className="flex items-center space-x-1 px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-bold transition-colors shadow-xs"
+                title="Sistem Satış Balans Fişini Kameradan Oku"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>📸 Fiş Tara</span>
+              </button>
+
+              <div className="text-right">
+                <span className="text-[11px] font-medium text-slate-400 block">DengePOS Toplamı</span>
+                <span className="text-base font-bold text-indigo-600">{formatCurrency(dengeTotal)}</span>
+              </div>
             </div>
           </div>
 
@@ -150,9 +193,22 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
                 <p className="text-xs text-slate-500">Paket & Online Satış Kırılımları</p>
               </div>
             </div>
-            <div className="text-right">
-              <span className="text-[11px] font-medium text-slate-400 block">Suitable Toplamı</span>
-              <span className="text-base font-bold text-blue-600">{formatCurrency(suitableTotal)}</span>
+
+            <div className="flex items-center space-x-3">
+              <button
+                type="button"
+                onClick={() => setActiveScanModal('suitable')}
+                className="flex items-center space-x-1 px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 rounded-xl text-xs font-bold transition-colors shadow-xs"
+                title="Suitable POS Günlük Satış Raporunu Kameradan Oku"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>📸 Fiş Tara</span>
+              </button>
+
+              <div className="text-right">
+                <span className="text-[11px] font-medium text-slate-400 block">Suitable Toplamı</span>
+                <span className="text-base font-bold text-blue-600">{formatCurrency(suitableTotal)}</span>
+              </div>
             </div>
           </div>
 
@@ -251,6 +307,24 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
           </div>
         </div>
       </div>
+
+      {/* DengePOS Scan Modal */}
+      <ScanReceiptModal
+        isOpen={activeScanModal === 'denge'}
+        onClose={() => setActiveScanModal(null)}
+        onApply={handleApplyDengeScan}
+        mode="denge"
+        title="DengePOS Balans Fişi Tara"
+      />
+
+      {/* Suitable POS Scan Modal */}
+      <ScanReceiptModal
+        isOpen={activeScanModal === 'suitable'}
+        onClose={() => setActiveScanModal(null)}
+        onApply={handleApplySuitableScan}
+        mode="suitable"
+        title="Suitable POS Satış Raporu Tara"
+      />
     </div>
   );
 }
