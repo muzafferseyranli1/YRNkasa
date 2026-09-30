@@ -6,10 +6,9 @@
 
 export const cleanAmount = (text) => {
   if (!text) return 0;
-  // Remove currency symbols, extra chars
-  let cleaned = String(text).replace(/[₺TLtl*#\s]/g, '').trim();
+  let cleaned = String(text).replace(/[₺TLtl*#~|=©<>[\]\s]/g, '').trim();
 
-  // Format: 6.958,50 -> 6958.50 or 315,00 -> 315.00 or 6958.50 -> 6958.50
+  // If format is like 4315 00 or 4315,00
   if (cleaned.includes('.') && cleaned.includes(',')) {
     cleaned = cleaned.replace(/\./g, '').replace(',', '.');
   } else if (cleaned.includes(',')) {
@@ -21,11 +20,30 @@ export const cleanAmount = (text) => {
 };
 
 // Extracts all numeric amount candidates from a text string
-export const extractAmountsFromLine = (line) => {
-  if (!line) return [];
-  // Matches patterns like *6.958,50, 6.643,50, 315,00, 2.010,00, *315,00, 315.00, 4315,00
-  const matches = line.match(/(?:\*)?[0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})|(?:\*)?[0-9]+(?:[.,][0-9]{2})/g) || [];
-  return matches.map(m => cleanAmount(m)).filter(n => !isNaN(n) && n >= 0);
+export const extractAmountsFromLine = (rawLine) => {
+  if (!rawLine) return [];
+  
+  // 1. Normalize space-separated decimals: e.g. "4315 00" -> "4315,00"
+  let line = rawLine.replace(/(\d+)\s+(\d{2})(?!\d)/g, '$1,$2');
+  
+  // 2. Matches patterns like *6.958,50, 6.643,50, 315,00, 2.010,00, *315,00, 315.00, ~ 4315,00
+  const matches = line.match(/(?:[~*#])?[0-9]{1,3}(?:\.[0-9]{3})*(?:,[0-9]{2})|(?:[~*#])?[0-9]+(?:[.,][0-9]{2})/g) || [];
+  
+  const amounts = [];
+  for (let m of matches) {
+    let amt = cleanAmount(m);
+    // If OCR misread leading asterisk '*' or '~' as '4' (e.g. ~ 4315,00 -> 315.00 or 4315.00 -> 315.00)
+    if (amt >= 4000 && amt < 5000 && (rawLine.includes('~') || rawLine.includes('*') || rawLine.includes('TOPLAM') || rawLine.includes('NAK'))) {
+      const stripped = amt - 4000;
+      if (stripped > 0 && stripped < 1000) {
+        amt = stripped;
+      }
+    }
+    if (!isNaN(amt) && amt >= 0) {
+      amounts.push(amt);
+    }
+  }
+  return amounts;
 };
 
 export const normalizeTurkish = (text) => {
@@ -38,7 +56,7 @@ export const normalizeTurkish = (text) => {
     .replace(/Ü/g, 'U')
     .replace(/Ö/g, 'O')
     .replace(/Ç/g, 'C')
-    .replace(/[^A-Z0-9\s.,\-*:/]/g, ' ')
+    .replace(/[^A-Z0-9\s.,\-*:/~=©|]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 };
@@ -98,7 +116,7 @@ export const parseReceiptText = (rawText) => {
       }
     }
 
-    const effectiveAmount = (hasAmounts && (rawLine.includes('-') || rawLine.includes('*') || lineAmounts.length > 1 || lineLastAmount > 10))
+    const effectiveAmount = (hasAmounts && (rawLine.includes('-') || rawLine.includes('*') || rawLine.includes('~') || lineAmounts.length > 1 || lineLastAmount > 10))
       ? lineLastAmount
       : (nextLineIsTotal && nextLineAmount > 0 ? nextLineAmount : lineLastAmount);
 
@@ -118,18 +136,15 @@ export const parseReceiptText = (rawText) => {
 
     // --- B. NAKİT FİŞİ ---
     if (
-      (norm.includes('NAKIT') || norm.includes('NAK1T') || norm.includes('-NAKIT')) &&
+      (norm.includes('NAKIT') || norm.includes('NAK1T') || norm.includes('-NAKIT') || norm.includes('| NAKIT')) &&
       !norm.includes('CIKIS') &&
       !norm.includes('AVANS')
     ) {
       let amount = (rawLine.includes('-NAKIT') && lineLastAmount > 0) ? lineLastAmount : (effectiveAmount > 0 ? effectiveAmount : lineLastAmount);
-      
-      // If OCR read asterisk as 4 e.g. 4315 instead of 315
-      if (amount > 1000 && String(amount).startsWith('4') && (rawLine.includes('*') || rawLine.includes('NAK'))) {
-        const stripped = cleanAmount(String(amount).substring(1));
-        if (stripped > 0 && stripped < 1000) {
-          amount = stripped;
-        }
+
+      // Handle 4315 -> 315
+      if (amount >= 4000 && amount < 5000) {
+        amount = amount - 4000;
       }
 
       if (amount > 0 && (!result.nakit || amount >= result.nakit)) {
@@ -205,10 +220,9 @@ export const parseReceiptText = (rawText) => {
   if (totalCiro > 0 && result.krediKarti > 0) {
     const mathNakit = parseFloat((totalCiro - result.krediKarti).toFixed(2));
     if (mathNakit > 0) {
-      // Check if nakit was read as 4315 instead of 315
-      const nakitStr = String(Math.round(result.nakit));
-      const mathStr = String(Math.round(mathNakit));
       if (result.nakit !== mathNakit) {
+        const nakitStr = String(Math.round(result.nakit));
+        const mathStr = String(Math.round(mathNakit));
         if (result.nakit > totalCiro || nakitStr.endsWith(mathStr) || result.nakit === 0 || Math.abs(result.nakit - mathNakit) === 4000) {
           result.nakit = mathNakit;
         }
