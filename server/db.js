@@ -33,6 +33,35 @@ db.exec(`
   );
 
   CREATE INDEX IF NOT EXISTS idx_reports_date ON daily_reports(date);
+
+  CREATE TABLE IF NOT EXISTS courier_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    courier_name TEXT NOT NULL,
+    order_count INTEGER DEFAULT 0,
+    unit_price REAL DEFAULT 20,
+    total_amount REAL DEFAULT 0,
+    notes TEXT DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_courier_date ON courier_payments(date);
+  CREATE INDEX IF NOT EXISTS idx_courier_name ON courier_payments(courier_name);
+
+  CREATE TABLE IF NOT EXISTS tip_payments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    date TEXT NOT NULL,
+    staff_name TEXT NOT NULL,
+    card_tip_amount REAL DEFAULT 0,
+    commission_rate REAL DEFAULT 20,
+    deduction_amount REAL DEFAULT 0,
+    net_cash_amount REAL DEFAULT 0,
+    notes TEXT DEFAULT '',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
+
+  CREATE INDEX IF NOT EXISTS idx_tip_date ON tip_payments(date);
+  CREATE INDEX IF NOT EXISTS idx_tip_staff ON tip_payments(staff_name);
 `);
 
 console.log(`[DB] SQLite database initialized at ${dbPath}`);

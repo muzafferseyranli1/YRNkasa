@@ -216,6 +216,68 @@ export default function ThermalReceipt({ date, data, metrics }) {
         </div>
       )}
 
+      {/* 6.1. KURYE ADİSYON / PAKET ÖDEMELERİ */}
+      {data.kuryeOdemeleri && data.kuryeOdemeleri.length > 0 && metrics.kuryeOdemeleriToplami > 0 && (
+        <div className="py-2 border-b-2 border-black">
+          <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
+            --- KURYE PAKET ÖDEMELERİ ---
+          </div>
+          <div className="space-y-1 text-sm font-bold">
+            {data.kuryeOdemeleri.filter(k => num(k.siparisSayisi) > 0 || num(k.toplamTutar) > 0).map((k, i) => {
+              const count = num(k.siparisSayisi);
+              const unit = k.birimFiyat !== undefined ? num(k.birimFiyat) : 20;
+              const total = k.toplamTutar !== undefined && k.toplamTutar !== '' ? num(k.toplamTutar) : (count * unit);
+              return (
+                <div key={i} className="flex justify-between items-center">
+                  <span>{k.kuryeAdi || 'Kurye'} ({count}x{unit}₺):</span>
+                  <span className="font-black">{formatCurrency(total)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t border-black mt-1.5 pt-1 flex justify-between text-sm font-black">
+            <span>Toplam Kurye Nakit Çıkışı:</span>
+            <span className="font-black">{formatCurrency(metrics.kuryeOdemeleriToplami)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* 6.2. KREDİ KARTI BAHŞİŞ & NAKİT TİP ÖDEMELERİ */}
+      {data.tipOdemeleri && data.tipOdemeleri.length > 0 && (metrics.tipCekilenKartToplami > 0 || metrics.tipNetNakitToplami > 0) && (
+        <div className="py-2 border-b-2 border-black">
+          <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
+            --- BAHŞİŞ (TİP) ÖDEMELERİ ---
+          </div>
+          <div className="space-y-1 text-sm font-bold">
+            {data.tipOdemeleri.filter(t => num(t.cekilenTip) > 0).map((t, i) => {
+              const cardTip = num(t.cekilenTip);
+              const rate = t.kesintiOrani !== undefined ? num(t.kesintiOrani) : 20;
+              const netCash = t.netNakitTip !== undefined && t.netNakitTip !== '' ? num(t.netNakitTip) : (cardTip - (cardTip * (rate / 100)));
+              return (
+                <div key={i} className="flex justify-between items-center">
+                  <span>{t.personelAdi || 'Personel'} (Kart:{cardTip}₺ -%{rate}):</span>
+                  <span className="font-black">Net {formatCurrency(netCash)}</span>
+                </div>
+              );
+            })}
+          </div>
+          <div className="border-t border-black mt-1.5 pt-1 space-y-0.5 text-xs font-bold">
+            <div className="flex justify-between">
+              <span>Karttan Çekilen Tip:</span>
+              <span>{formatCurrency(metrics.tipCekilenKartToplami)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>İşletme Komisyonu (%20):</span>
+              <span>{formatCurrency(metrics.tipKesintiToplami)}</span>
+            </div>
+            <div className="flex justify-between text-sm font-black pt-0.5 border-t border-black">
+              <span>Kasadan Ödenen Net Nakit:</span>
+              <span className="font-black">{formatCurrency(metrics.tipNetNakitToplami)}</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 7. İMZA ALANI */}
       <div className="pt-2 pb-1 text-center text-sm font-bold">
         <div className="flex justify-between mt-1">

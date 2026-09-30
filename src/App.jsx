@@ -1,14 +1,20 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Toaster, toast } from 'react-hot-toast';
 import Header from './components/Header';
+import NavigationBar from './components/NavigationBar';
 import KasaDevirSection from './components/KasaDevirSection';
 import PosSalesSection from './components/PosSalesSection';
 import ZReportsSection from './components/ZReportsSection';
 import ExpensesSection from './components/ExpensesSection';
+import CourierSection from './components/CourierSection';
+import TipSection from './components/TipSection';
 import FizikiKasaSection from './components/FizikiKasaSection';
 import SummaryCards from './components/SummaryCards';
 import ThermalReceipt from './components/ThermalReceipt';
 import HistoryModal from './components/HistoryModal';
+import CourierReportsView from './components/reports/CourierReportsView';
+import TipReportsView from './components/reports/TipReportsView';
+import ArchiveReportsView from './components/reports/ArchiveReportsView';
 import { calculateReportMetrics, getDefaultReportData } from './utils/calculations';
 
 export default function App() {
@@ -20,6 +26,7 @@ export default function App() {
     return `${year}-${month}-${day}`;
   };
 
+  const [activeTab, setActiveTab] = useState('entry'); // 'entry' | 'courier_report' | 'tip_report' | 'archive'
   const [selectedDate, setSelectedDate] = useState(getTodayString());
   const [data, setData] = useState(null);
   const [reportExists, setReportExists] = useState(false);
@@ -113,10 +120,10 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-100 flex flex-col pb-16 md:pb-6">
       <Toaster position="top-right" />
 
-      {/* Screen View */}
+      {/* Screen Header */}
       <Header
         selectedDate={selectedDate}
         onDateChange={(newDate) => {
@@ -137,54 +144,88 @@ export default function App() {
         suggestedDevir={suggestedDevir}
       />
 
+      {/* Top / Bottom Navigation Bar */}
+      <NavigationBar activeTab={activeTab} onTabChange={setActiveTab} />
+
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 screen-only">
-        {isLoading ? (
-          <div className="flex items-center justify-center h-64">
-            <div className="text-center">
-              <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
-              <p className="text-sm font-semibold text-slate-500">Rapor verileri yükleniyor...</p>
+        {/* Tab 1: Kasa Girişi */}
+        {activeTab === 'entry' && (
+          isLoading ? (
+            <div className="flex items-center justify-center h-64">
+              <div className="text-center">
+                <div className="w-10 h-10 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3"></div>
+                <p className="text-sm font-semibold text-slate-500">Rapor verileri yükleniyor...</p>
+              </div>
             </div>
-          </div>
-        ) : !data ? (
-          <div className="text-center py-20 text-slate-500">Veri bulunamadı.</div>
-        ) : (
-          <div className="space-y-6">
-            {/* 1. Özet & Mutabakat Kartları */}
-            <SummaryCards metrics={metrics} />
+          ) : !data ? (
+            <div className="text-center py-20 text-slate-500">Veri bulunamadı.</div>
+          ) : (
+            <div className="space-y-6">
+              {/* 1. Özet & Mutabakat Kartları */}
+              <SummaryCards metrics={metrics} />
 
-            {/* 2. Kasa Devir & Girişler */}
-            <KasaDevirSection
-              data={data.kasaGiris}
-              onChange={(newGiris) => updateData({ kasaGiris: newGiris })}
-            />
+              {/* 2. Kasa Devir & Girişler */}
+              <KasaDevirSection
+                data={data.kasaGiris}
+                onChange={(newGiris) => updateData({ kasaGiris: newGiris })}
+              />
 
-            {/* 3. POS Satışları (DengePOS & Suitable POS) */}
-            <PosSalesSection
-              dengePos={data.dengePos}
-              suitablePos={data.suitablePos}
-              onChangeDenge={(newDenge) => updateData({ dengePos: newDenge })}
-              onChangeSuitable={(newSuitable) => updateData({ suitablePos: newSuitable })}
-            />
+              {/* 3. POS Satışları (DengePOS & Suitable POS) */}
+              <PosSalesSection
+                dengePos={data.dengePos}
+                suitablePos={data.suitablePos}
+                onChangeDenge={(newDenge) => updateData({ dengePos: newDenge })}
+                onChangeSuitable={(newSuitable) => updateData({ suitablePos: newSuitable })}
+              />
 
-            {/* 4. Z Bilgileri (POS Cihazları & Yemek Kartları) */}
-            <ZReportsSection
-              zBilgileri={data.zBilgileri}
-              onChange={(newZ) => updateData({ zBilgileri: newZ })}
-            />
+              {/* 4. Z Bilgileri (POS Cihazları & Yemek Kartları) */}
+              <ZReportsSection
+                zBilgileri={data.zBilgileri}
+                onChange={(newZ) => updateData({ zBilgileri: newZ })}
+              />
 
-            {/* 5. Harcamalar & Kasa Çıkışları */}
-            <ExpensesSection
-              harcamalar={data.harcamalar}
-              onChange={(newHarcamalar) => updateData({ harcamalar: newHarcamalar })}
-            />
+              {/* 5. Harcamalar & Kasa Çıkışları */}
+              <ExpensesSection
+                harcamalar={data.harcamalar}
+                onChange={(newHarcamalar) => updateData({ harcamalar: newHarcamalar })}
+              />
 
-            {/* 6. Gün Sonu Fiziki Kasa Sayımı & Devir Uyarısı */}
-            <FizikiKasaSection
-              fizikiKasa={data.fizikiKasa}
-              hesaplananNakit={metrics?.hesaplananNakit || 0}
-              onChange={(newVal) => updateData({ fizikiKasa: newVal })}
-            />
-          </div>
+              {/* 6. Kurye Paket / Adisyon Ödemeleri */}
+              <CourierSection
+                kuryeOdemeleri={data.kuryeOdemeleri || []}
+                onChange={(newKurye) => updateData({ kuryeOdemeleri: newKurye })}
+              />
+
+              {/* 7. Kredi Kartı Bahşiş (Tip) & Nakit Ödeme */}
+              <TipSection
+                tipOdemeleri={data.tipOdemeleri || []}
+                onChange={(newTips) => updateData({ tipOdemeleri: newTips })}
+              />
+
+              {/* 8. Gün Sonu Fiziki Kasa Sayımı & Devir Uyarısı */}
+              <FizikiKasaSection
+                fizikiKasa={data.fizikiKasa}
+                hesaplananNakit={metrics?.hesaplananNakit || 0}
+                onChange={(newVal) => updateData({ fizikiKasa: newVal })}
+              />
+            </div>
+          )
+        )}
+
+        {/* Tab 2: Kurye Raporları */}
+        {activeTab === 'courier_report' && <CourierReportsView />}
+
+        {/* Tab 3: Bahşiş / Tip Raporları */}
+        {activeTab === 'tip_report' && <TipReportsView />}
+
+        {/* Tab 4: Geçmiş Kasa Arşivi */}
+        {activeTab === 'archive' && (
+          <ArchiveReportsView
+            onSelectDate={(dt) => {
+              setSelectedDate(dt);
+              setActiveTab('entry');
+            }}
+          />
         )}
       </main>
 
@@ -203,3 +244,4 @@ export default function App() {
     </div>
   );
 }
+

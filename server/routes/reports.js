@@ -50,16 +50,22 @@ export const getDefaultReportData = (devir = 0) => ({
     setcard: 0,
   },
   harcamalar: [
-    { id: 'h_1', title: 'Nakit Çıkışı', tutar: 0, aciklama: 'bankaya yatırıldı' },
-    { id: 'h_2', title: 'Yakıt Alımı', tutar: 0, aciklama: '' },
-    { id: 'h_3', title: 'Market Alışverişi', tutar: 0, aciklama: '' },
-    { id: 'h_4', title: 'Hammadde Alımı', tutar: 0, aciklama: '' },
+    { id: 'h_1', title: 'Nakit Çıkışı', tutar: 0, aciklama: 'bankaya yatırıldı', isKK: false, imageUrl: null },
+    { id: 'h_2', title: 'Yakıt Alımı', tutar: 0, aciklama: '', isKK: false, imageUrl: null },
+    { id: 'h_3', title: 'Market Alışverişi', tutar: 0, aciklama: '', isKK: false, imageUrl: null },
+    { id: 'h_4', title: 'Hammadde Alımı', tutar: 0, aciklama: '', isKK: false, imageUrl: null },
+  ],
+  kuryeOdemeleri: [
+    { id: 'k_1', kuryeAdi: 'Yılmaz', siparisSayisi: 0, birimFiyat: 20, toplamTutar: 0, aciklama: '' },
+  ],
+  tipOdemeleri: [
+    { id: 't_1', personelAdi: '', cekilenTip: 0, kesintiOrani: 20, kesintiTutari: 0, netNakitTip: 0, aciklama: '' },
   ],
   fizikiKasa: 0,
   notlar: '',
 });
 
-// List all reports
+// List all reports summary
 router.get('/', (req, res) => {
   try {
     const stmt = db.prepare(`
@@ -71,6 +77,118 @@ router.get('/', (req, res) => {
     res.json({ success: true, reports });
   } catch (error) {
     console.error('Error listing reports:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Analytics: Courier Payments Report
+router.get('/analytics/couriers', (req, res) => {
+  try {
+    const { startDate, endDate, courier } = req.query;
+    let query = 'SELECT * FROM courier_payments WHERE 1=1';
+    const params = [];
+
+    if (startDate) {
+      query += ' AND date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      query += ' AND date <= ?';
+      params.push(endDate);
+    }
+    if (courier && courier.trim()) {
+      query += ' AND courier_name LIKE ?';
+      params.push(`%${courier.trim()}%`);
+    }
+
+    query += ' ORDER BY date DESC, id DESC';
+    const records = db.prepare(query).all(...params);
+
+    // Summary calculation
+    const totalOrders = records.reduce((acc, r) => acc + (r.order_count || 0), 0);
+    const totalAmount = records.reduce((acc, r) => acc + (r.total_amount || 0), 0);
+
+    // Group by courier
+    const byCourier = {};
+    for (const r of records) {
+      const name = r.courier_name || 'Bilinmeyen';
+      if (!byCourier[name]) {
+        byCourier[name] = { courierName: name, totalOrders: 0, totalAmount: 0, count: 0 };
+      }
+      byCourier[name].totalOrders += Number(r.order_count) || 0;
+      byCourier[name].totalAmount += Number(r.total_amount) || 0;
+      byCourier[name].count += 1;
+    }
+
+    res.json({
+      success: true,
+      summary: {
+        totalOrders,
+        totalAmount,
+        recordCount: records.length,
+        byCourier: Object.values(byCourier),
+      },
+      records,
+    });
+  } catch (error) {
+    console.error('Error fetching courier analytics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Analytics: Tip Payments Report
+router.get('/analytics/tips', (req, res) => {
+  try {
+    const { startDate, endDate, staff } = req.query;
+    let query = 'SELECT * FROM tip_payments WHERE 1=1';
+    const params = [];
+
+    if (startDate) {
+      query += ' AND date >= ?';
+      params.push(startDate);
+    }
+    if (endDate) {
+      query += ' AND date <= ?';
+      params.push(endDate);
+    }
+    if (staff && staff.trim()) {
+      query += ' AND staff_name LIKE ?';
+      params.push(`%${staff.trim()}%`);
+    }
+
+    query += ' ORDER BY date DESC, id DESC';
+    const records = db.prepare(query).all(...params);
+
+    const totalCardTip = records.reduce((acc, r) => acc + (r.card_tip_amount || 0), 0);
+    const totalDeduction = records.reduce((acc, r) => acc + (r.deduction_amount || 0), 0);
+    const totalNetCash = records.reduce((acc, r) => acc + (r.net_cash_amount || 0), 0);
+
+    // Group by staff
+    const byStaff = {};
+    for (const r of records) {
+      const name = r.staff_name || 'Bilinmeyen';
+      if (!byStaff[name]) {
+        byStaff[name] = { staffName: name, totalCardTip: 0, totalDeduction: 0, totalNetCash: 0, count: 0 };
+      }
+      byStaff[name].totalCardTip += Number(r.card_tip_amount) || 0;
+      byStaff[name].totalDeduction += Number(r.deduction_amount) || 0;
+      byStaff[name].totalNetCash += Number(r.net_cash_amount) || 0;
+      byStaff[name].count += 1;
+    }
+
+    res.json({
+      success: true,
+      summary: {
+        totalCardTip,
+        totalDeduction,
+        totalNetCash,
+        recordCount: records.length,
+        byStaff: Object.values(byStaff),
+      },
+      records,
+    });
+  } catch (error) {
+    console.error('Error fetching tip analytics:', error);
     res.status(500).json({ success: false, error: error.message });
   }
 });
@@ -179,6 +297,7 @@ router.post('/:date', (req, res) => {
 
     const dataJson = JSON.stringify(data);
 
+    // Save daily report
     const stmt = db.prepare(`
       INSERT INTO daily_reports (date, data, devir, fiziki_kasa, toplam_satis, hesaplanan_nakit, kasa_farki, updated_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
@@ -194,9 +313,55 @@ router.post('/:date', (req, res) => {
 
     stmt.run(date, dataJson, devir, fiziki_kasa, toplam_satis, hesaplanan_nakit, kasa_farki);
 
+    // Sync Courier Payments
+    const delCouriers = db.prepare('DELETE FROM courier_payments WHERE date = ?');
+    delCouriers.run(date);
+
+    const insertCourier = db.prepare(`
+      INSERT INTO courier_payments (date, courier_name, order_count, unit_price, total_amount, notes)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `);
+
+    const courierList = data.kuryeOdemeleri || [];
+    for (const c of courierList) {
+      if (c.courierName || c.kuryeAdi) {
+        const name = (c.courierName || c.kuryeAdi || '').trim();
+        const count = Number(c.orderCount ?? c.siparisSayisi) || 0;
+        const unit = c.unitPrice !== undefined ? Number(c.unitPrice) : (c.birimFiyat !== undefined ? Number(c.birimFiyat) : 20);
+        const total = c.totalAmount !== undefined && c.totalAmount !== '' ? Number(c.totalAmount) : (c.toplamTutar !== undefined && c.toplamTutar !== '' ? Number(c.toplamTutar) : (count * unit));
+        const notes = c.notes || c.aciklama || '';
+        if (name && (count > 0 || total > 0)) {
+          insertCourier.run(date, name, count, unit, total, notes);
+        }
+      }
+    }
+
+    // Sync Tip Payments
+    const delTips = db.prepare('DELETE FROM tip_payments WHERE date = ?');
+    delTips.run(date);
+
+    const insertTip = db.prepare(`
+      INSERT INTO tip_payments (date, staff_name, card_tip_amount, commission_rate, deduction_amount, net_cash_amount, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `);
+
+    const tipList = data.tipOdemeleri || [];
+    for (const t of tipList) {
+      const name = (t.staffName || t.personelAdi || '').trim();
+      const cardTip = Number(t.cardTipAmount ?? t.cekilenTip) || 0;
+      const rate = t.commissionRate !== undefined ? Number(t.commissionRate) : (t.kesintiOrani !== undefined ? Number(t.kesintiOrani) : 20);
+      const deduction = t.deductionAmount !== undefined && t.deductionAmount !== '' ? Number(t.deductionAmount) : (t.kesintiTutari !== undefined && t.kesintiTutari !== '' ? Number(t.kesintiTutari) : (cardTip * (rate / 100)));
+      const netCash = t.netCashAmount !== undefined && t.netCashAmount !== '' ? Number(t.netCashAmount) : (t.netNakitTip !== undefined && t.netNakitTip !== '' ? Number(t.netNakitTip) : (cardTip - deduction));
+      const notes = t.notes || t.aciklama || '';
+
+      if (name && (cardTip > 0 || netCash > 0)) {
+        insertTip.run(date, name, cardTip, rate, deduction, netCash, notes);
+      }
+    }
+
     res.json({
       success: true,
-      message: 'Rapor başarıyla kaydedildi.',
+      message: 'Rapor ve ödeme kayıtları başarıyla kaydedildi.',
       date,
     });
   } catch (error) {
@@ -209,9 +374,10 @@ router.post('/:date', (req, res) => {
 router.delete('/:date', (req, res) => {
   try {
     const { date } = req.params;
-    const stmt = db.prepare('DELETE FROM daily_reports WHERE date = ?');
-    const result = stmt.run(date);
-    res.json({ success: true, changes: result.changes });
+    db.prepare('DELETE FROM daily_reports WHERE date = ?').run(date);
+    db.prepare('DELETE FROM courier_payments WHERE date = ?').run(date);
+    db.prepare('DELETE FROM tip_payments WHERE date = ?').run(date);
+    res.json({ success: true });
   } catch (error) {
     console.error('Error deleting report:', error);
     res.status(500).json({ success: false, error: error.message });

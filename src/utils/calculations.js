@@ -66,17 +66,39 @@ export const calculateReportMetrics = (data) => {
     .reduce((acc, item) => acc + num(item.tutar), 0);
   const toplamHarcamalar = nakitHarcamalar + kkHarcamalar;
 
-  // 5. Kasa Nakit Akışı & Hesaplanan Nakit (Yalnızca Kasadan çıkan Nakit Harcamalar düşülür!)
+  // 5. Kurye Paket / Adisyon Ödemeleri (Kasadan Nakit Çıkar)
+  const kuryeList = data.kuryeOdemeleri || [];
+  const kuryeOdemeleriToplami = kuryeList.reduce((acc, item) => {
+    const count = num(item.siparisSayisi);
+    const unitPrice = item.birimFiyat !== undefined ? num(item.birimFiyat) : 20;
+    const total = item.toplamTutar !== undefined && item.toplamTutar !== '' ? num(item.toplamTutar) : (count * unitPrice);
+    return acc + total;
+  }, 0);
+  const kuryeToplamSiparisSayisi = kuryeList.reduce((acc, item) => acc + num(item.siparisSayisi), 0);
+
+  // 6. Kredi Kartı Bahşiş (Tip) & Kesintili Nakit Ödeme
+  const tipList = data.tipOdemeleri || [];
+  const tipCekilenKartToplami = tipList.reduce((acc, item) => acc + num(item.cekilenTip), 0);
+  const tipNetNakitToplami = tipList.reduce((acc, item) => {
+    if (item.netNakitTip !== undefined && item.netNakitTip !== '') return acc + num(item.netNakitTip);
+    const cekilen = num(item.cekilenTip);
+    const rate = item.kesintiOrani !== undefined ? num(item.kesintiOrani) : 20;
+    return acc + (cekilen - (cekilen * (rate / 100)));
+  }, 0);
+  const tipKesintiToplami = tipCekilenKartToplami - tipNetNakitToplami;
+
+  // 7. Kasa Nakit Akışı & Hesaplanan Nakit (Nakit Harcamalar + Kurye + Nakit Tip düşülür)
   const devir = num(kasaGiris.devir);
   const kasayaParaKondu = num(kasaGiris.kasayaParaKondu);
   const satisNakitToplam = num(dengePos.nakit) + num(suitablePos.nakit);
 
   const toplamNakitGiris = devir + kasayaParaKondu + satisNakitToplam;
-  const hesaplananNakit = toplamNakitGiris - nakitHarcamalar;
+  const toplamNakitCikis = nakitHarcamalar + kuryeOdemeleriToplami + tipNetNakitToplami;
+  const hesaplananNakit = toplamNakitGiris - toplamNakitCikis;
   const fizikiSayim = num(fizikiKasa);
   const kasaFarki = fizikiSayim - hesaplananNakit; // Negatif ise eksik, pozitif ise fazla
 
-  // 6. Fiş Kesim Mutabakatı (Nakit Fişi)
+  // 8. Fiş Kesim Mutabakatı (Nakit Fişi)
   // kasa.xlsx: D7 + D15 + D17 (Denge Nakit + Suitable Nakit + Suitable Online KK)
   const kesilmesiGerekenNakitFisi =
     num(dengePos.nakit) +
@@ -90,17 +112,16 @@ export const calculateReportMetrics = (data) => {
   );
   const nakitFisFarki = kesilenNakitFisi - kesilmesiGerekenNakitFisi;
 
-  // 7. Kredi Kartı Mutabakatı
-  // kasa.xlsx: D8 + D16 (Denge KK + Suitable KK)
+  // 9. Kredi Kartı Mutabakatı (Satış KK + Karttan Çekilen Bahşiş)
   const hesaplananKrediKarti =
-    num(dengePos.krediKarti) + num(suitablePos.krediKarti);
+    num(dengePos.krediKarti) + num(suitablePos.krediKarti) + tipCekilenKartToplami;
   const fizikiKrediKarti = posCihazlari.reduce(
     (acc, item) => acc + num(item.krediKarti),
     0
   );
   const krediKartiFarki = fizikiKrediKarti - hesaplananKrediKarti;
 
-  // 8. Paneller Toplamı
+  // 10. Paneller Toplamı
   const panelSiparisTutari = (paneller || []).reduce(
     (acc, item) => acc + num(item.satis),
     0
@@ -113,7 +134,7 @@ export const calculateReportMetrics = (data) => {
   const panelPosTutarFarki = panelSiparisTutari - suitablePosToplam;
   const siparisSayisiFarki = panelSiparisSayisi - posPaketSiparisSayisi;
 
-  // 9. Yemek Kartları Mutabakatı
+  // 11. Yemek Kartları Mutabakatı
   const multinetHesaplanan = num(dengePos.multinet) + num(suitablePos.multinet);
   const multinetFiziki = num(zBilgileri.multinet);
   const multinetFark = multinetFiziki - multinetHesaplanan;
@@ -137,7 +158,13 @@ export const calculateReportMetrics = (data) => {
     toplamHarcamalar,
     nakitHarcamalar,
     kkHarcamalar,
+    kuryeOdemeleriToplami,
+    kuryeToplamSiparisSayisi,
+    tipCekilenKartToplami,
+    tipNetNakitToplami,
+    tipKesintiToplami,
     toplamNakitGiris,
+    toplamNakitCikis,
     hesaplananNakit,
     fizikiSayim,
     kasaFarki,
@@ -207,10 +234,16 @@ export const getDefaultReportData = (devir = 0) => ({
     setcard: 0,
   },
   harcamalar: [
-    { id: 'h_1', title: 'Nakit Çıkışı', tutar: 0, aciklama: 'bankaya yatırıldı', isKK: false },
-    { id: 'h_2', title: 'Yakıt Alımı', tutar: 0, aciklama: '', isKK: false },
-    { id: 'h_3', title: 'Market Alışverişi', tutar: 0, aciklama: '', isKK: false },
-    { id: 'h_4', title: 'Hammadde Alımı', tutar: 0, aciklama: '', isKK: false },
+    { id: 'h_1', title: 'Nakit Çıkışı', tutar: 0, aciklama: 'bankaya yatırıldı', isKK: false, imageUrl: null },
+    { id: 'h_2', title: 'Yakıt Alımı', tutar: 0, aciklama: '', isKK: false, imageUrl: null },
+    { id: 'h_3', title: 'Market Alışverişi', tutar: 0, aciklama: '', isKK: false, imageUrl: null },
+    { id: 'h_4', title: 'Hammadde Alımı', tutar: 0, aciklama: '', isKK: false, imageUrl: null },
+  ],
+  kuryeOdemeleri: [
+    { id: 'k_1', kuryeAdi: 'Yılmaz', siparisSayisi: 0, birimFiyat: 20, toplamTutar: 0, aciklama: '' },
+  ],
+  tipOdemeleri: [
+    { id: 't_1', personelAdi: '', cekilenTip: 0, kesintiOrani: 20, kesintiTutari: 0, netNakitTip: 0, aciklama: '' },
   ],
   fizikiKasa: 0,
   notlar: '',
