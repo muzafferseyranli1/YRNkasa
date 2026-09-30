@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Coins, Calendar, Search, Printer, RefreshCw, CreditCard, Scissors, HandCoins, Users } from 'lucide-react';
 import { formatCurrency } from '../../utils/calculations';
+import { apiFetch } from '../../utils/api';
 
 export default function TipReportsView() {
   const [startDate, setStartDate] = useState(() => {
@@ -24,7 +25,7 @@ export default function TipReportsView() {
       if (endDate) params.append('endDate', endDate);
       if (staffFilter) params.append('staff', staffFilter);
 
-      const res = await fetch(`/api/reports/analytics/tips?${params.toString()}`);
+      const res = await apiFetch(`/api/reports/analytics/tips?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         setReportData(json);

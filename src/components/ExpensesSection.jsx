@@ -3,6 +3,7 @@ import { ArrowDownCircle, Plus, Trash2, Camera, Image, Eye, Loader2, Sparkles } 
 import { formatCurrency, num } from '../utils/calculations';
 import ImageViewerModal from './ImageViewerModal';
 import ScanReceiptModal from './ScanReceiptModal';
+import { apiFetch } from '../utils/api';
 
 export default function ExpensesSection({ harcamalar = [], onChange }) {
   const [activeViewerImage, setActiveViewerImage] = useState(null);
@@ -41,7 +42,7 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
     formData.append('file', file);
 
     try {
-      const res = await fetch('/api/upload', {
+      const res = await apiFetch('/api/upload', {
         method: 'POST',
         body: formData,
       });
@@ -70,7 +71,7 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
         const blob = await fetch(previewUrl).then((r) => r.blob());
         const formData = new FormData();
         formData.append('file', blob, 'scanned-receipt.jpg');
-        const res = await fetch('/api/upload', { method: 'POST', body: formData });
+        const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
         const data = await res.json();
         if (data.success) {
           receiptUrl = data.url;

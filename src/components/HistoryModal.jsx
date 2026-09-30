@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { X, Calendar, Search, ArrowRight, TrendingUp, CheckCircle, AlertTriangle } from 'lucide-react';
 import { formatCurrency } from '../utils/calculations';
+import { apiFetch } from '../utils/api';
 
 export default function HistoryModal({ isOpen, onClose, onSelectDate, currentDate }) {
   const [reports, setReports] = useState([]);
@@ -16,7 +17,7 @@ export default function HistoryModal({ isOpen, onClose, onSelectDate, currentDat
   const fetchReports = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/reports');
+      const res = await apiFetch('/api/reports');
       const data = await res.json();
       if (data.success) {
         setReports(data.reports || []);

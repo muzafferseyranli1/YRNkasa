@@ -3,7 +3,6 @@
   "appName": "YRN Kasa",
   "webDir": "dist",
   "server": {
-    "url": "http://188.132.198.144:3002",
     "cleartext": true,
     "androidScheme": "http"
   },

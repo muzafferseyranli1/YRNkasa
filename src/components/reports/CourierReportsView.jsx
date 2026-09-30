@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Bike, Calendar, Search, Download, Printer, RefreshCw, PackageCheck, Banknote, User } from 'lucide-react';
 import { formatCurrency, formatNumber } from '../../utils/calculations';
+import { apiFetch } from '../../utils/api';
 
 export default function CourierReportsView() {
   const [startDate, setStartDate] = useState(() => {
@@ -21,7 +22,7 @@ export default function CourierReportsView() {
       if (endDate) params.append('endDate', endDate);
       if (courierFilter) params.append('courier', courierFilter);
 
-      const res = await fetch(`/api/reports/analytics/couriers?${params.toString()}`);
+      const res = await apiFetch(`/api/reports/analytics/couriers?${params.toString()}`);
       const json = await res.json();
       if (json.success) {
         setReportData(json);

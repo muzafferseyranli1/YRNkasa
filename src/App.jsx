@@ -16,6 +16,7 @@ import CourierReportsView from './components/reports/CourierReportsView';
 import TipReportsView from './components/reports/TipReportsView';
 import ArchiveReportsView from './components/reports/ArchiveReportsView';
 import { calculateReportMetrics, getDefaultReportData } from './utils/calculations';
+import { apiFetch } from './utils/api';
 
 export default function App() {
   const getTodayString = () => {
@@ -40,7 +41,7 @@ export default function App() {
   const loadReport = useCallback(async (dateToLoad) => {
     setIsLoading(true);
     try {
-      const res = await fetch(`/api/reports/${dateToLoad}`);
+      const res = await apiFetch(`/api/reports/${dateToLoad}`);
       const json = await res.json();
       if (json.success) {
         setData(json.report.data);
@@ -78,7 +79,7 @@ export default function App() {
     if (!data || !metrics) return;
     setIsSaving(true);
     try {
-      const res = await fetch(`/api/reports/${selectedDate}`, {
+      const res = await apiFetch(`/api/reports/${selectedDate}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

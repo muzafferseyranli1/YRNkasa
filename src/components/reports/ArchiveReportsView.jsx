@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Calendar, Search, RefreshCw, Eye, Printer, CheckCircle2, AlertTriangle, XCircle, ArrowRight } from 'lucide-react';
 import { formatCurrency } from '../../utils/calculations';
+import { apiFetch } from '../../utils/api';
 
 export default function ArchiveReportsView({ onSelectDate }) {
   const [reports, setReports] = useState([]);
@@ -10,7 +11,7 @@ export default function ArchiveReportsView({ onSelectDate }) {
   const fetchArchive = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/reports');
+      const res = await apiFetch('/api/reports');
       const json = await res.json();
       if (json.success) {
         setReports(json.reports || []);
