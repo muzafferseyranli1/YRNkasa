@@ -1,35 +1,31 @@
-# Stage 1: Build Frontend
-FROM node:20-alpine AS builder
+# Stage 1: Build React Frontend
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
 COPY package*.json ./
-# Build frontend only without compiling native backend addons
-RUN npm install --ignore-scripts
+RUN npm install
 
 COPY . .
 RUN npm run build
 
 # Stage 2: Production Server
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 WORKDIR /app
 
-# Install native dependencies required for compiling better-sqlite3
-RUN apk add --no-cache python3 make g++ sqlite
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV DATA_DIR=/app/data
 
+# Copy package files and install production dependencies
 COPY package*.json ./
 RUN npm install --omit=dev
 
-# Copy server and built static frontend from builder
+# Copy built frontend from builder and backend files
 COPY --from=builder /app/dist ./dist
 COPY server ./server
 COPY scripts ./scripts
-
-# Persistent database storage directory
-ENV DATA_DIR=/app/data
-ENV PORT=3000
-ENV NODE_ENV=production
 
 RUN mkdir -p /app/data
 

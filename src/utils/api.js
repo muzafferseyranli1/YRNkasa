@@ -3,13 +3,12 @@
  */
 
 export const getApiBaseUrl = () => {
-  // If running inside Capacitor Native or file protocol or dev environment
+  // If running inside Capacitor Native or file protocol
   if (
     (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) ||
-    (typeof window !== 'undefined' && window.location.protocol === 'file:') ||
-    (typeof window !== 'undefined' && window.location.hostname === 'localhost')
+    (typeof window !== 'undefined' && window.location.protocol === 'file:')
   ) {
-    return 'http://188.132.198.144:3002';
+    return 'https://kasa.derinsoft.com.tr';
   }
   return '';
 };
