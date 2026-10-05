@@ -2,6 +2,7 @@ import React from 'react';
 import { Globe, Plus, Trash2 } from 'lucide-react';
 import { formatCurrency, formatNumber, num } from '../utils/calculations';
 
+import NumberInput from './NumberInput';
 export default function PanelsSection({ paneller = [], onChange }) {
   const handleItemChange = (index, field, value) => {
     const next = [...paneller];
@@ -82,7 +83,7 @@ export default function PanelsSection({ paneller = [], onChange }) {
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Satış (TL)</label>
-                <input
+                <NumberInput
                   type="number"
                   step="any"
                   value={panel.satis ?? 0}
@@ -93,7 +94,7 @@ export default function PanelsSection({ paneller = [], onChange }) {
 
               <div>
                 <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Sipariş Sayısı</label>
-                <input
+                <NumberInput
                   type="number"
                   step="1"
                   value={panel.siparisSayisi ?? 0}

@@ -9,6 +9,7 @@ services:
       - PORT=3000
       - NODE_ENV=production
       - DATA_DIR=/app/data
+      - AUTH_PASSWORD=${AUTH_PASSWORD:-}
     volumes:
       - yrn_kasa_data:/app/data
 

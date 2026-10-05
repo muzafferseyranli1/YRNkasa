@@ -2,6 +2,8 @@ import React from 'react';
 import { Bike, Plus, Trash2, Calculator } from 'lucide-react';
 import { num, formatCurrency } from '../utils/calculations';
 
+import NumberInput from './NumberInput';
+import NameInput from './NameInput';
 export default function CourierSection({ kuryeOdemeleri = [], onChange }) {
   const handleAddRow = () => {
     const newId = `k_${Date.now()}`;
@@ -105,8 +107,9 @@ export default function CourierSection({ kuryeOdemeleri = [], onChange }) {
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition">
                     <td className="py-2 px-2">
-                      <input
-                        type="text"
+                      <NameInput
+                        kind="courier"
+                        extraNames={kuryeOdemeleri.map((k) => k.kuryeAdi || k.courierName)}
                         value={item.kuryeAdi || item.courierName || ''}
                         onChange={(e) => handleChangeRow(item.id, 'kuryeAdi', e.target.value)}
                         placeholder="Örn: Yılmaz"
@@ -114,7 +117,7 @@ export default function CourierSection({ kuryeOdemeleri = [], onChange }) {
                       />
                     </td>
                     <td className="py-2 px-2">
-                      <input
+                      <NumberInput
                         type="number"
                         min="0"
                         value={item.siparisSayisi ?? ''}
@@ -124,7 +127,7 @@ export default function CourierSection({ kuryeOdemeleri = [], onChange }) {
                       />
                     </td>
                     <td className="py-2 px-2">
-                      <input
+                      <NumberInput
                         type="number"
                         min="0"
                         step="0.5"

@@ -3,8 +3,9 @@ import { ArrowDownCircle, Plus, Trash2, Camera, Image, Eye, Loader2, Sparkles } 
 import { formatCurrency, num } from '../utils/calculations';
 import ImageViewerModal from './ImageViewerModal';
 import ScanReceiptModal from './ScanReceiptModal';
-import { apiFetch } from '../utils/api';
+import { apiFetch, assetUrl } from '../utils/api';
 
+import NumberInput from './NumberInput';
 export default function ExpensesSection({ harcamalar = [], onChange }) {
   const [activeViewerImage, setActiveViewerImage] = useState(null);
   const [activeViewerTitle, setActiveViewerTitle] = useState('');
@@ -85,7 +86,7 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
       id,
       title: parsed.title || 'Taranan Masraf',
       tutar: parsed.tutar || 0,
-      aciklama: 'Kameradan otomatik okundu',
+      aciklama: '',
       isKK: false,
       receiptImage: receiptUrl,
     };
@@ -206,7 +207,7 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
                     title="Fiş görselini incele"
                   >
                     <img
-                      src={item.receiptImage}
+                      src={assetUrl(item.receiptImage)}
                       alt="Fiş"
                       className="w-8 h-8 object-cover rounded"
                     />
@@ -248,7 +249,7 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
               <div className="sm:w-1/4">
                 <label className="block sm:hidden text-[10px] text-slate-400 font-medium">Tutar (TL)</label>
                 <div className="relative">
-                  <input
+                  <NumberInput
                     type="number"
                     step="any"
                     value={item.tutar ?? 0}
@@ -294,7 +295,7 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
           setActiveViewerImage(null);
           setActiveViewerIndex(null);
         }}
-        imageUrl={activeViewerImage}
+        imageUrl={assetUrl(activeViewerImage)}
         title={activeViewerTitle}
         onDelete={() => {
           if (activeViewerIndex !== null) {

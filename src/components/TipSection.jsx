@@ -2,6 +2,8 @@ import React from 'react';
 import { Coins, Plus, Trash2, Percent } from 'lucide-react';
 import { num, formatCurrency } from '../utils/calculations';
 
+import NumberInput from './NumberInput';
+import NameInput from './NameInput';
 export default function TipSection({ tipOdemeleri = [], onChange }) {
   const handleAddRow = () => {
     const newId = `t_${Date.now()}`;
@@ -120,8 +122,9 @@ export default function TipSection({ tipOdemeleri = [], onChange }) {
                 return (
                   <tr key={item.id} className="hover:bg-slate-50/70 transition">
                     <td className="py-2 px-2">
-                      <input
-                        type="text"
+                      <NameInput
+                        kind="staff"
+                        extraNames={tipOdemeleri.map((t) => t.personelAdi || t.staffName)}
                         value={item.personelAdi || item.staffName || ''}
                         onChange={(e) => handleChangeRow(item.id, 'personelAdi', e.target.value)}
                         placeholder="Örn: Garson Ali"
@@ -129,7 +132,7 @@ export default function TipSection({ tipOdemeleri = [], onChange }) {
                       />
                     </td>
                     <td className="py-2 px-2">
-                      <input
+                      <NumberInput
                         type="number"
                         min="0"
                         step="1"
@@ -141,10 +144,11 @@ export default function TipSection({ tipOdemeleri = [], onChange }) {
                     </td>
                     <td className="py-2 px-2">
                       <div className="flex items-center justify-center">
-                        <input
+                        <NumberInput
                           type="number"
                           min="0"
                           max="100"
+                          wrapperClassName="w-12"
                           value={item.kesintiOrani ?? 20}
                           onChange={(e) => handleChangeRow(item.id, 'kesintiOrani', e.target.value)}
                           placeholder="20"

@@ -2,6 +2,7 @@ import React from 'react';
 import { Wallet, PlusCircle } from 'lucide-react';
 import { formatCurrency, num } from '../utils/calculations';
 
+import NumberInput from './NumberInput';
 export default function KasaDevirSection({ data, onChange }) {
   const devir = num(data?.devir);
   const kasayaParaKondu = num(data?.kasayaParaKondu);
@@ -39,7 +40,7 @@ export default function KasaDevirSection({ data, onChange }) {
             <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">Otomatik / Serbest</span>
           </label>
           <div className="relative">
-            <input
+            <NumberInput
               type="number"
               step="any"
               value={data?.devir ?? 0}
@@ -57,7 +58,7 @@ export default function KasaDevirSection({ data, onChange }) {
             <span className="text-[10px] text-slate-400">Gün içi ilave</span>
           </label>
           <div className="relative">
-            <input
+            <NumberInput
               type="number"
               step="any"
               value={data?.kasayaParaKondu ?? 0}

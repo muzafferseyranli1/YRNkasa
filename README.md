@@ -46,7 +46,8 @@ Bu proje Coolify üzerinde tamamen bağımsız bir proje olarak çalışacak şe
 4. Persistent Storage (Kalıcı Depolama):
    - Veritabanının konteyner yeniden başlasa bile silinmemesi için Volume ekleyin:
    - **Mount Path:** `/app/data`
-5. **Deploy** butonuna basarak yayına alın!
+5. **Ortam değişkeni (parola):** Coolify'da `AUTH_PASSWORD` değişkenini tanımlayın. Tanımlı değilse giriş ekranı/doğrulama KAPALI çalışır. (İsteğe bağlı: `AUTH_SECRET` ile token imza anahtarı.)
+6. **Deploy** butonuna basarak yayına alın!
 
 ---
 

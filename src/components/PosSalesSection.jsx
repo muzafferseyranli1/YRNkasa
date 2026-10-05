@@ -3,6 +3,7 @@ import { Store, ShoppingBag, CreditCard, Banknote, Utensils, Camera, Sparkles } 
 import { formatCurrency, num } from '../utils/calculations';
 import ScanReceiptModal from './ScanReceiptModal';
 
+import NumberInput from './NumberInput';
 export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, onChangeSuitable }) {
   const [activeScanModal, setActiveScanModal] = useState(null); // 'denge' | 'suitable' | null
 
@@ -102,7 +103,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Nakit</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={dengePos?.nakit ?? 0}
@@ -113,7 +114,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Kredi Kartı</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={dengePos?.krediKarti ?? 0}
@@ -124,7 +125,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Cari</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={dengePos?.cari ?? 0}
@@ -135,7 +136,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Sodexho</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={dengePos?.sodexho ?? 0}
@@ -146,7 +147,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Multinet</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={dengePos?.multinet ?? 0}
@@ -157,7 +158,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Ticket</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={dengePos?.ticket ?? 0}
@@ -168,7 +169,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Setcard</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={dengePos?.setcard ?? 0}
@@ -215,7 +216,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Nakit</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={suitablePos?.nakit ?? 0}
@@ -226,7 +227,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Kredi Kartı</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={suitablePos?.krediKarti ?? 0}
@@ -239,7 +240,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
               <label className="block text-xs font-medium text-slate-600 mb-1 text-blue-700 font-semibold">
                 Online Kredi Kartı
               </label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={suitablePos?.onlineKrediKarti ?? 0}
@@ -250,7 +251,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Sodexho</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={suitablePos?.sodexho ?? 0}
@@ -261,7 +262,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Multinet</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={suitablePos?.multinet ?? 0}
@@ -272,7 +273,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Ticket</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={suitablePos?.ticket ?? 0}
@@ -283,7 +284,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Setcard</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={suitablePos?.setcard ?? 0}
@@ -296,7 +297,7 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
               <label className="block text-xs font-medium text-amber-700 font-semibold mb-1">
                 Paket Sipariş Sayısı
               </label>
-              <input
+              <NumberInput
                 type="number"
                 step="1"
                 value={suitablePos?.paketSiparisSayisi ?? 0}

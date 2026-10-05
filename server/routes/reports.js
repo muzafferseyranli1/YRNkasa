@@ -81,6 +81,24 @@ router.get('/', (req, res) => {
   }
 });
 
+// Autocomplete: distinct courier / staff names used before
+router.get('/names/:kind', (req, res) => {
+  try {
+    const { kind } = req.params;
+    const sql =
+      kind === 'courier'
+        ? 'SELECT courier_name AS name, COUNT(*) AS n FROM courier_payments GROUP BY courier_name ORDER BY n DESC, name'
+        : kind === 'staff'
+          ? 'SELECT staff_name AS name, COUNT(*) AS n FROM tip_payments GROUP BY staff_name ORDER BY n DESC, name'
+          : null;
+    if (!sql) return res.status(400).json({ success: false, error: 'Geçersiz tür' });
+    const names = db.prepare(sql).all().map((r) => r.name).filter(Boolean);
+    res.json({ success: true, names });
+  } catch (error) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Analytics: Courier Payments Report
 router.get('/analytics/couriers', (req, res) => {
   try {

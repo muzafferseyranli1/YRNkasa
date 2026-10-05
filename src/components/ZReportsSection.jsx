@@ -3,6 +3,7 @@ import { ReceiptText, Plus, Trash2, Smartphone, CreditCard, Camera, Sparkles } f
 import { formatCurrency, num } from '../utils/calculations';
 import ScanReceiptModal from './ScanReceiptModal';
 
+import NumberInput from './NumberInput';
 export default function ZReportsSection({ zBilgileri = {}, onChange }) {
   const [activeScanTarget, setActiveScanTarget] = useState(null); // { type: 'pos', index: 0 } or { type: 'meal' }
   const posCihazlari = zBilgileri.posCihazlari || [];
@@ -161,7 +162,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
                   <div className="grid grid-cols-2 gap-2">
                     <div>
                       <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Nakit Fişi (TL)</label>
-                      <input
+                      <NumberInput
                         type="number"
                         step="any"
                         value={device.nakit ?? 0}
@@ -171,7 +172,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
                     </div>
                     <div>
                       <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Kredi Kartı (TL)</label>
-                      <input
+                      <NumberInput
                         type="number"
                         step="any"
                         value={device.krediKarti ?? 0}
@@ -207,7 +208,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
           <div className="space-y-2.5">
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Sodexho Z Tutarı</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={zBilgileri?.sodexho ?? 0}
@@ -218,7 +219,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Multinet Z Tutarı</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={zBilgileri?.multinet ?? 0}
@@ -229,7 +230,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Ticket Z Tutarı</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={zBilgileri?.ticket ?? 0}
@@ -240,7 +241,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
 
             <div>
               <label className="block text-xs font-medium text-slate-600 mb-1">Setcard Z Tutarı</label>
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={zBilgileri?.setcard ?? 0}

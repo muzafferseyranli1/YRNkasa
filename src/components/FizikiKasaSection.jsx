@@ -2,6 +2,7 @@ import React from 'react';
 import { DollarSign, AlertTriangle, CheckCircle, ArrowRight } from 'lucide-react';
 import { formatCurrency, num } from '../utils/calculations';
 
+import NumberInput from './NumberInput';
 export default function FizikiKasaSection({ fizikiKasa, hesaplananNakit, onChange }) {
   const sayim = num(fizikiKasa);
   const hesaplanan = num(hesaplananNakit);
@@ -51,7 +52,7 @@ export default function FizikiKasaSection({ fizikiKasa, hesaplananNakit, onChang
 
           <div className="w-48">
             <div className="relative">
-              <input
+              <NumberInput
                 type="number"
                 step="any"
                 value={fizikiKasa ?? 0}

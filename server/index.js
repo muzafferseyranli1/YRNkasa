@@ -5,6 +5,7 @@ import fs from 'fs';
 import { fileURLToPath } from 'url';
 import reportsRouter from './routes/reports.js';
 import uploadRouter from './routes/upload.js';
+import { requireAuth, loginHandler, checkHandler, authEnabled } from './auth.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -22,16 +23,20 @@ const uploadsDir = path.join(dataDir, 'uploads');
 if (!fs.existsSync(uploadsDir)) {
   fs.mkdirSync(uploadsDir, { recursive: true });
 }
-app.use('/uploads', express.static(uploadsDir));
+app.set('trust proxy', 1);
 
-// API routes
-app.use('/api/reports', reportsRouter);
-app.use('/api/upload', uploadRouter);
-
-// Health check endpoint for Coolify / Docker
+// Auth (health ve giriş hariç tüm API ve yüklenen görseller korumalı)
+app.post('/api/auth/login', loginHandler);
+app.get('/api/auth/check', checkHandler);
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
+
+app.use('/uploads', requireAuth, express.static(uploadsDir));
+
+// API routes
+app.use('/api/reports', requireAuth, reportsRouter);
+app.use('/api/upload', requireAuth, uploadRouter);
 
 // Serve frontend in production
 const distPath = path.join(__dirname, '..', 'dist');
@@ -44,4 +49,7 @@ if (fs.existsSync(distPath)) {
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`[SERVER] YRN Kasa server running on http://0.0.0.0:${PORT}`);
+  if (!authEnabled()) {
+    console.warn('[SERVER] UYARI: AUTH_PASSWORD tanımlı değil, kimlik doğrulama KAPALI. Üretimde bu ortam değişkenini ayarlayın.');
+  }
 });

@@ -5,6 +5,7 @@ import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.util.Base64;
 import androidx.annotation.NonNull;
+import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
@@ -64,6 +65,22 @@ public class NativeOcrPlugin extends Plugin {
                     public void onSuccess(Text visionText) {
                         JSObject ret = new JSObject();
                         ret.put("text", visionText.getText());
+                        // Satır bazlı kutular: JS tarafı aynı hizadaki etiket + tutarı tek satıra birleştirir
+                        JSArray lines = new JSArray();
+                        for (Text.TextBlock block : visionText.getTextBlocks()) {
+                            for (Text.Line line : block.getLines()) {
+                                android.graphics.Rect box = line.getBoundingBox();
+                                if (box == null) continue;
+                                JSObject l = new JSObject();
+                                l.put("text", line.getText());
+                                l.put("left", box.left);
+                                l.put("top", box.top);
+                                l.put("right", box.right);
+                                l.put("bottom", box.bottom);
+                                lines.put(l);
+                            }
+                        }
+                        ret.put("lines", lines);
                         call.resolve(ret);
                     }
                 })

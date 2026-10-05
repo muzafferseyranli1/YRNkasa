@@ -1,10 +1,11 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, X, Check, Loader2, Sparkles, AlertCircle, FileText, ChevronDown, ChevronUp, Store, ShoppingBag } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
-import { parseReceiptText } from '../utils/ocrParser';
+import { parseReceiptText, buildRowsFromBoxes } from '../utils/ocrParser';
 import { formatCurrency } from '../utils/calculations';
 import { preprocessImageForOcr } from '../utils/imagePreprocess';
 
+import NumberInput from './NumberInput';
 export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos', title = 'Fiş / Rapor Tara' }) {
   const [imagePreview, setImagePreview] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -40,12 +41,15 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
         });
         const base64Data = await base64Promise;
         const res = await NativeOcr.recognizeText({ base64: base64Data });
-        rawRecognizedText = res.text || '';
+        // Etiket ve tutarı aynı satırda birleştir (ML Kit bunları ayrı bloklara bölebiliyor)
+        rawRecognizedText = (res.lines?.length ? buildRowsFromBoxes(res.lines) : '') || res.text || '';
       } else {
         // Web fallback: Preprocess image on canvas + Tesseract OCR
         const preprocessedBlob = await preprocessImageForOcr(file);
         setProgressText('Karakterler ve rakamlar taranıyor (OCR)...');
         const worker = await createWorker('tur+eng');
+        // PSM 6: tek blok metin (fiş satırları); boşlukları koru ki etiket/tutar ayrımı bozulmasın
+        await worker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
         const ret = await worker.recognize(preprocessedBlob);
         await worker.terminate();
         rawRecognizedText = ret.data.text || '';
@@ -83,8 +87,8 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
         if (extracted.ticket > 0) defaults.ticket = extracted.ticket;
         if (extracted.setcard > 0) defaults.setcard = extracted.setcard;
       } else if (mode === 'expense') {
-        defaults.title = extracted.merchantName || 'Gider Fişi';
-        defaults.tutar = extracted.genelToplam || extracted.nakit || 0;
+        defaults.title = extracted.merchantName || '';
+        defaults.tutar = extracted.genelToplam || 0;
       }
       setSelectedFields(defaults);
     } catch (err) {
@@ -127,7 +131,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                 {mode === 'denge' && 'Sistem Satış Balans Raporu (ÖDEME dökümü)'}
                 {mode === 'suitable' && 'Suitable POS Günlük Satış Raporu (Genel Ödeme Yöntemleri)'}
                 {mode === 'pos' && 'ÖKC POS Z Raporu / Gün Sonu'}
-                {mode === 'expense' && 'Masraf ve Fatura Fişi'}
+                {mode === 'expense' && 'Masraf Fişi (firma adı + KDV dahil toplam)'}
               </p>
             </div>
           </div>
@@ -224,12 +228,23 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                     Tespit Edilen Değerler (Düzenlenebilir)
                   </h3>
 
+                  {parsedData.warnings?.length > 0 && (
+                    <div className="flex gap-2 p-2.5 bg-amber-50 border border-amber-200 rounded-lg text-[11px] text-amber-800">
+                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+                      <ul className="space-y-0.5">
+                        {parsedData.warnings.map((w, i) => (
+                          <li key={i}>{w}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
                   {/* DENGE POS FIELD GRID */}
                   {mode === 'denge' && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nakit</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.nakit ?? 0}
@@ -240,7 +255,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Kredi Kartı</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.krediKarti ?? 0}
@@ -251,7 +266,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Cari</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.cari ?? 0}
@@ -262,7 +277,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Sodexho</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.sodexho ?? 0}
@@ -273,7 +288,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Multinet</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.multinet ?? 0}
@@ -284,7 +299,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Ticket</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.ticket ?? 0}
@@ -295,7 +310,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Setcard</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.setcard ?? 0}
@@ -311,7 +326,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Nakit</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.nakit ?? 0}
@@ -322,7 +337,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Kredi Kartı</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.krediKarti ?? 0}
@@ -333,7 +348,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div className="bg-blue-50/60 p-2 rounded-lg border border-blue-200">
                         <label className="block text-[11px] font-bold text-blue-800 mb-1">Online Kredi Kartı</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.onlineKrediKarti ?? 0}
@@ -344,7 +359,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Sodexho</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.sodexho ?? 0}
@@ -355,7 +370,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Multinet</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.multinet ?? 0}
@@ -366,7 +381,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Ticket</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.ticket ?? 0}
@@ -377,7 +392,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Setcard</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="any"
                           value={selectedFields.setcard ?? 0}
@@ -388,7 +403,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div className="bg-amber-50/60 p-2 rounded-lg border border-amber-200">
                         <label className="block text-[11px] font-bold text-amber-800 mb-1">Paket Sipariş Sayısı</label>
-                        <input
+                        <NumberInput
                           type="number"
                           step="1"
                           value={selectedFields.paketSiparisSayisi ?? 0}
@@ -405,7 +420,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
                         <span className="text-[11px] font-semibold text-slate-500">Nakit Fişi</span>
                         <div className="flex items-center space-x-2 mt-1">
-                          <input
+                          <NumberInput
                             type="number"
                             step="any"
                             value={selectedFields.nakit ?? 0}
@@ -421,7 +436,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                       <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between">
                         <span className="text-[11px] font-semibold text-slate-500">Kredi Kartı Z</span>
                         <div className="flex items-center space-x-2 mt-1">
-                          <input
+                          <NumberInput
                             type="number"
                             step="any"
                             value={selectedFields.krediKarti ?? 0}
@@ -438,7 +453,7 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
                         <div className="p-3 bg-amber-50/60 rounded-xl border border-amber-200 flex flex-col justify-between col-span-1 sm:col-span-2">
                           <span className="text-[11px] font-semibold text-amber-700">Yemek Kartı / Diğer Z</span>
                           <div className="flex items-center space-x-2 mt-1">
-                            <input
+                            <NumberInput
                               type="number"
                               step="any"
                               value={selectedFields.yemekKarti ?? parsedData.yemekKartiToplam ?? 0}
@@ -474,10 +489,10 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
 
                       <div>
                         <label className="block text-xs font-semibold text-slate-600 mb-1">
-                          Toplam Fiş Tutarı
+                          Toplam Fiş Tutarı (KDV Dahil)
                         </label>
                         <div className="relative">
-                          <input
+                          <NumberInput
                             type="number"
                             step="any"
                             value={selectedFields.tutar ?? 0}
