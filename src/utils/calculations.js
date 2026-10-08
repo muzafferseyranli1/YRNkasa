@@ -20,23 +20,38 @@ export const formatNumber = (val) => {
   return new Intl.NumberFormat('tr-TR').format(n);
 };
 
+const DEFAULT_KANAL_SATIRLARI = () => [
+  { id: 'restoran', name: 'Restoran Ciro', sayiTuru: 'kisi', panel: false, ciro: {}, adet: {} },
+  { id: 'restoranPaket', name: 'Restoran Paket', sayiTuru: 'paket', panel: false, ciro: {}, adet: {} },
+  { id: 'yemeksepeti', name: 'Yemek Sepeti', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+  { id: 'getir', name: 'Getir', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+  { id: 'trendyol', name: 'Trendyol', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+  { id: 'migros', name: 'Migros', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+  { id: 'fuudy', name: 'Fuudy', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+  { id: 'suitable', name: 'Suitable', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+  { id: 'tiklagelsin', name: 'Tıkla Gelsin', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+];
+const KANAL_VERSION = 2;
+
+// sayiTuru: 'kisi' (restoran) veya 'paket'; panel: true ise platform (Yemek Sepeti, Getir...) sayılır
 export const getDefaultKanalCiro = () => ({
+  v: KANAL_VERSION,
   markalar: [
     { id: 'pide', name: 'Pide' },
     { id: 'tandir', name: 'Tandır' },
     { id: 'kiymali', name: 'Kıymalı' },
   ],
-  // sayiTuru: 'kisi' (restoran) veya 'paket'; panel: true ise platform (Yemek Sepeti, Getir...) sayılır
-  satirlar: [
-    { id: 'restoran', name: 'Restoran Ciro', sayiTuru: 'kisi', panel: false, ciro: {}, adet: {} },
-    { id: 'restoranPaket', name: 'Restoran Paket', sayiTuru: 'paket', panel: false, ciro: {}, adet: {} },
-    { id: 'yemeksepeti', name: 'Yemek Sepeti', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
-    { id: 'getir', name: 'Getir', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
-    { id: 'trendyol', name: 'Trendyol', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
-    { id: 'migros', name: 'Migros', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
-    { id: 'fuudy', name: 'Fuudy', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
-  ],
+  satirlar: DEFAULT_KANAL_SATIRLARI(),
 });
+
+// v2: Suitable ve Tıkla Gelsin eklendi; eski kayıtlarda eksik varsayılan satırlar sona eklenir
+const migrateKanalCiro = (kanal) => {
+  if (!kanal || !kanal.satirlar) return getDefaultKanalCiro();
+  if ((kanal.v || 1) >= KANAL_VERSION) return kanal;
+  const mevcut = new Set(kanal.satirlar.map((r) => r.id));
+  const eksik = DEFAULT_KANAL_SATIRLARI().filter((r) => !mevcut.has(r.id));
+  return { ...kanal, v: KANAL_VERSION, satirlar: [...kanal.satirlar, ...eksik] };
+};
 
 export const getDefaultBankalar = () => [
   { id: 'banka_1', name: 'Banka 1', tutar: '' },
@@ -48,7 +63,7 @@ export const normalizeReportData = (data) => {
   if (!data) return data;
   return {
     ...data,
-    kanalCiro: data.kanalCiro?.satirlar ? data.kanalCiro : getDefaultKanalCiro(),
+    kanalCiro: migrateKanalCiro(data.kanalCiro),
     bankaGunSonu: Array.isArray(data.bankaGunSonu) ? data.bankaGunSonu : getDefaultBankalar(),
   };
 };
