@@ -11,6 +11,7 @@ export default function ThermalReceipt({ date, data, metrics }) {
     paneller = [],
     zBilgileri = {},
     harcamalar = [],
+    kanalCiro = null,
   } = data;
 
   const formatDateDisplay = (dateStr) => {
@@ -118,6 +119,80 @@ export default function ThermalReceipt({ date, data, metrics }) {
         </div>
       </div>
 
+      {/* 3b. MARKA / KANAL KIRILIMLI CİRO */}
+      {metrics.kanalGirildi && kanalCiro && (
+        <div className="py-2 border-b-2 border-black">
+          <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
+            --- MARKA / KANAL CİRO ---
+          </div>
+
+          {/* Marka toplamları */}
+          <div className="space-y-1 text-sm font-bold">
+            {(kanalCiro.markalar || []).map((mk) => (
+              <div key={mk.id} className="flex justify-between">
+                <span>{mk.name}:</span>
+                <span className="font-black">
+                  {formatCurrency(metrics.kanal.markaCiro[mk.id])} · {formatNumber(metrics.kanal.markaPaket[mk.id])} pkt
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Kanal satırları (yalnızca girilmiş olanlar) */}
+          <div className="border-t border-black my-1.5"></div>
+          <div className="space-y-1 text-xs font-bold">
+            {(kanalCiro.satirlar || [])
+              .filter((r) => {
+                const t = metrics.kanal.satirToplamlari[r.id] || {};
+                return (t.ciro || 0) !== 0 || (t.online || 0) !== 0 || (t.adet || 0) !== 0;
+              })
+              .map((r) => {
+                const t = metrics.kanal.satirToplamlari[r.id] || {};
+                return (
+                  <div key={r.id}>
+                    <div className="flex justify-between">
+                      <span>{r.name}:</span>
+                      <span className="font-black">{formatCurrency(t.ciro)}</span>
+                    </div>
+                    <div className="flex justify-between pl-2 text-[11px]">
+                      <span>{r.sayiTuru === 'kisi' ? `${formatNumber(t.adet)} kişi` : `${formatNumber(t.adet)} paket`}</span>
+                      {(t.online || 0) !== 0 && <span>Online alacak: {formatCurrency(t.online)}</span>}
+                    </div>
+                  </div>
+                );
+              })}
+          </div>
+
+          <div className="border-t-2 border-black my-1.5"></div>
+          <div className="space-y-1 text-sm font-bold">
+            <div className="flex justify-between text-base font-black">
+              <span>CİRO TOPLAM:</span>
+              <span>{formatCurrency(metrics.kanal.ciroToplam)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Online Alacak Toplam:</span>
+              <span className="font-black">{formatCurrency(metrics.kanal.onlineToplam)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Toplam Paket / Kişi:</span>
+              <span className="font-black">
+                {formatNumber(metrics.kanal.paketToplam)} / {formatNumber(metrics.kanal.kisiToplam)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span>Kanal Ciro − POS Farkı:</span>
+              <span className="font-black">{formatCurrency(metrics.kanalCiroFarki)}</span>
+            </div>
+            {metrics.onlineKontrolVar && (
+              <div className="flex justify-between">
+                <span>Online Alacak − Suitable Online:</span>
+                <span className="font-black">{formatCurrency(metrics.kanalOnlineFarki)}</span>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* 4. Z RAPORU & FİŞ MUTABAKATI */}
       <div className="py-2 border-b-2 border-black">
         <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
@@ -151,13 +226,38 @@ export default function ThermalReceipt({ date, data, metrics }) {
             <span>Kredi Kartı Farkı:</span>
             <span>{formatCurrency(metrics.krediKartiFarki)}</span>
           </div>
+
+          {metrics.bankaGirildi && (
+            <>
+              <div className="border-t border-black my-1.5"></div>
+              <div className="font-black text-xs uppercase">Banka Gün Sonu</div>
+              {(metrics.bankaDetay || []).map((b) => (
+                <div key={b.id}>
+                  <div className="flex justify-between">
+                    <span>{b.name}:</span>
+                    <span className="font-black">{formatCurrency(b.tutar)}</span>
+                  </div>
+                  {b.cihazSayisi > 0 && (
+                    <div className="flex justify-between pl-2 text-[11px]">
+                      <span>Z: {formatCurrency(b.zToplam)}</span>
+                      <span>Fark: {formatCurrency(b.fark)}</span>
+                    </div>
+                  )}
+                </div>
+              ))}
+              <div className="flex justify-between font-black pt-0.5">
+                <span>Banka − Z Farkı:</span>
+                <span>{formatCurrency(metrics.bankaFarki)}</span>
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       {/* 5. YEMEK KARTLARI */}
       <div className="py-2 border-b-2 border-black">
         <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-          --- YEMEK KARTLARI (FİZİKİ / SİSTEM) ---
+          --- YEMEK KARTI GÜN SONU (GÜN SONU / SİSTEM) ---
         </div>
         <div className="space-y-1 text-sm font-bold">
           {Object.entries(metrics.yemekKartlari || {}).map(([key, item]) => {
