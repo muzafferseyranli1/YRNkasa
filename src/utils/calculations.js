@@ -21,7 +21,7 @@ export const formatNumber = (val) => {
 };
 
 const DEFAULT_KANAL_SATIRLARI = () => [
-  { id: 'restoran', name: 'Restoran Ciro', sayiTuru: 'kisi', panel: false, ciro: {}, adet: {} },
+  { id: 'restoran', name: 'Salon', sayiTuru: 'kisi', panel: false, ciro: {}, adet: {} },
   { id: 'restoranPaket', name: 'Restoran Paket', sayiTuru: 'paket', panel: false, ciro: {}, adet: {} },
   { id: 'yemeksepeti', name: 'Yemek Sepeti', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
   { id: 'getir', name: 'Getir', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
@@ -47,24 +47,41 @@ export const getDefaultKanalCiro = () => ({
 // v2: Suitable ve Tıkla Gelsin eklendi; eski kayıtlarda eksik varsayılan satırlar sona eklenir
 const migrateKanalCiro = (kanal) => {
   if (!kanal || !kanal.satirlar) return getDefaultKanalCiro();
+  // Eski kayıtlardaki "Restoran Ciro" satırı "Salon" olarak yeniden adlandırılır
+  kanal = { ...kanal, satirlar: kanal.satirlar.map((r) => (r.id === 'restoran' && r.name === 'Restoran Ciro' ? { ...r, name: 'Salon' } : r)) };
   if ((kanal.v || 1) >= KANAL_VERSION) return kanal;
   const mevcut = new Set(kanal.satirlar.map((r) => r.id));
   const eksik = DEFAULT_KANAL_SATIRLARI().filter((r) => !mevcut.has(r.id));
   return { ...kanal, v: KANAL_VERSION, satirlar: [...kanal.satirlar, ...eksik] };
 };
 
-export const getDefaultBankalar = () => [
-  { id: 'banka_1', name: 'Banka 1', tutar: '' },
-  { id: 'banka_2', name: 'Banka 2', tutar: '' },
-];
+// Banka gün sonu artık her POS cihazının içinde (device.banka = [Banka 1, Banka 2, Banka 3])
+export const BANKA_SAYISI = 3;
+export const getDefaultBankalar = () => [];
+
+// Eski kayıtlardaki genel banka listesi (bankaGunSonu) POS cihazlarının içine taşınır
+const migrateBankalar = (data) => {
+  const eski = Array.isArray(data.bankaGunSonu) ? data.bankaGunSonu : [];
+  const cihazlar = data.zBilgileri?.posCihazlari || [];
+  if (!eski.some((b) => num(b.tutar) !== 0) || !cihazlar.length) return data;
+  const yeni = cihazlar.map((d) => ({ ...d, banka: Array.from({ length: BANKA_SAYISI }, (_, i) => d.banka?.[i] ?? '') }));
+  eski.forEach((b, i) => {
+    if (num(b.tutar) === 0) return;
+    const hedef = Math.max(0, yeni.findIndex((d) => d.bankId === b.id));
+    const slot = Math.min(i, BANKA_SAYISI - 1);
+    yeni[hedef].banka[slot] = num(yeni[hedef].banka[slot]) + num(b.tutar);
+  });
+  return { ...data, zBilgileri: { ...data.zBilgileri, posCihazlari: yeni } };
+};
 
 // Eski kayıtlarda olmayan alanları varsayılanla tamamlar
 export const normalizeReportData = (data) => {
   if (!data) return data;
+  const moved = migrateBankalar(data);
   return {
-    ...data,
-    kanalCiro: migrateKanalCiro(data.kanalCiro),
-    bankaGunSonu: Array.isArray(data.bankaGunSonu) ? data.bankaGunSonu : getDefaultBankalar(),
+    ...moved,
+    kanalCiro: migrateKanalCiro(moved.kanalCiro),
+    bankaGunSonu: [],
   };
 };
 
@@ -143,6 +160,7 @@ export const calculateReportMetrics = (data) => {
     num(dengePos.multinet) +
     num(dengePos.ticket) +
     num(dengePos.setcard) +
+    num(dengePos.onlineKrediKarti) +
     num(dengePos.cari);
 
   // 2. Suitable POS Satış Toplamı
@@ -153,7 +171,8 @@ export const calculateReportMetrics = (data) => {
     num(suitablePos.sodexho) +
     num(suitablePos.multinet) +
     num(suitablePos.ticket) +
-    num(suitablePos.setcard);
+    num(suitablePos.setcard) +
+    num(suitablePos.cari);
 
   // 3. Toplam Ciro / Satış
   const toplamSatis = dengePosToplam + suitablePosToplam;
@@ -205,6 +224,7 @@ export const calculateReportMetrics = (data) => {
   const kesilmesiGerekenNakitFisi =
     num(dengePos.nakit) +
     num(suitablePos.nakit) +
+    num(dengePos.onlineKrediKarti) +
     num(suitablePos.onlineKrediKarti);
 
   const posCihazlari = zBilgileri.posCihazlari || [];
@@ -246,29 +266,22 @@ export const calculateReportMetrics = (data) => {
 
   // 10b2. Suitable "Online Kredi Kartı" = kanal tablosundaki platform online alacaklarının toplamı (sağlama)
   const kanalOnlineToplam = kanal.onlineToplam;
-  const onlineKontrolVar = kanalOnlineToplam > 0 || num(suitablePos.onlineKrediKarti) > 0;
-  const kanalOnlineFarki = onlineKontrolVar ? kanalOnlineToplam - num(suitablePos.onlineKrediKarti) : 0;
+  const posOnlineToplam = num(dengePos.onlineKrediKarti) + num(suitablePos.onlineKrediKarti);
+  const onlineKontrolVar = kanalOnlineToplam > 0 || posOnlineToplam > 0;
+  const kanalOnlineFarki = onlineKontrolVar ? kanalOnlineToplam - posOnlineToplam : 0;
 
-  // 10c. Banka gün sonu raporları vs POS Z kredi kartı (2 farklı banka)
-  const bankalar = bankaGunSonu || [];
-  const bankaToplam = bankalar.reduce((acc, b) => acc + num(b.tutar), 0);
-  const bankaGirildi = bankalar.some((b) => String(b.tutar ?? '') !== '' && num(b.tutar) !== 0);
-  const bankaDetay = bankalar.map((b) => {
-    const atananCihazlar = posCihazlari.filter((d) => d.bankId === b.id);
-    const zToplam = atananCihazlar.reduce((acc, d) => acc + num(d.krediKarti), 0);
-    return {
-      id: b.id,
-      name: b.name,
-      tutar: num(b.tutar),
-      zToplam,
-      cihazSayisi: atananCihazlar.length,
-      fark: atananCihazlar.length ? num(b.tutar) - zToplam : null,
-    };
-  });
-  const bankaAtanmamisZ = posCihazlari
-    .filter((d) => !bankalar.some((b) => b.id === d.bankId))
-    .reduce((acc, d) => acc + num(d.krediKarti), 0);
-  const bankaFarki = bankaGirildi ? bankaToplam - fizikiKrediKarti : 0;
+  // 10c. Banka gün sonu: her POS cihazında en çok 3 banka; toplamı o cihazın kredi kartı Z'si ile eşleşmeli
+  const bankaDetay = posCihazlari
+    .map((d) => {
+      const tutar = (d.banka || []).reduce((acc, v) => acc + num(v), 0);
+      const zToplam = num(d.krediKarti);
+      return { id: d.id, name: d.name, tutar, zToplam, cihazSayisi: 1, fark: tutar - zToplam };
+    })
+    .filter((d) => d.tutar !== 0);
+  const bankaToplam = bankaDetay.reduce((acc, d) => acc + d.tutar, 0);
+  const bankaGirildi = bankaDetay.length > 0;
+  const bankaFarki = bankaDetay.reduce((acc, d) => acc + d.fark, 0);
+  const bankaAtanmamisZ = 0;
 
   // 11. Yemek Kartları Mutabakatı
   const multinetHesaplanan = num(dengePos.multinet) + num(suitablePos.multinet);
@@ -393,7 +406,7 @@ export const getDefaultReportData = (devir = 0) => ({
     { id: 't_1', personelAdi: '', cekilenTip: 0, kesintiOrani: 20, kesintiTutari: 0, netNakitTip: 0, aciklama: '' },
   ],
   kanalCiro: getDefaultKanalCiro(),
-  bankaGunSonu: getDefaultBankalar(),
+  bankaGunSonu: [],
   fizikiKasa: 0,
   notlar: '',
 });

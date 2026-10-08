@@ -119,6 +119,7 @@ export default function CourierSection({ kuryeOdemeleri = [], onChange }) {
                     <td className="py-2 px-2">
                       <NumberInput
                         type="number"
+                        step="1"
                         min="0"
                         value={item.siparisSayisi ?? ''}
                         onChange={(e) => handleChangeRow(item.id, 'siparisSayisi', e.target.value)}

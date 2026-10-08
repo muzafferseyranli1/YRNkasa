@@ -37,41 +37,55 @@ export default function SummaryCards({ metrics }) {
     kanal = null,
   } = metrics;
 
+  const salonCiro = kanal?.satirToplamlari?.restoran?.ciro || 0;
+  const salonFis = kanal?.kisiToplam || 0;
+  const paketCiro = (kanal?.ciroToplam || 0) - salonCiro;
+  const paketFis = kanal?.paketToplam || 0;
+  const kirilim = [
+    { ad: 'Toplam', satis: salonCiro + paketCiro, fis: salonFis + paketFis, bold: true },
+    { ad: 'Salon', satis: salonCiro, fis: salonFis },
+    { ad: 'Paket', satis: paketCiro, fis: paketFis },
+  ];
+
   return (
     <div className="space-y-4">
       {/* 4 Ana Metrik Kartı */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        {/* 1. Toplam Ciro */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
+        {/* 1. Toplam Ciro + Salon / Paket kırılımı (2 kart genişliğinde) */}
+        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs sm:col-span-2">
           <div className="flex items-center justify-between">
             <span className="text-xs font-bold uppercase text-slate-400">Toplam Satış (Ciro)</span>
             <div className="p-2 bg-blue-50 text-blue-600 rounded-xl">
               <TrendingUp className="w-4 h-4" />
             </div>
           </div>
-          <div className="mt-2">
-            <span className="text-xl font-black text-slate-900">{formatCurrency(toplamSatis)}</span>
-            <p className="text-[11px] text-slate-500 mt-0.5">DengePOS + Suitable POS</p>
-          </div>
-        </div>
-
-        {/* 2. Kasa Nakit Durumu */}
-        <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-xs">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-bold uppercase text-slate-400">Hesaplanan Kasa</span>
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-xl">
-              <Banknote className="w-4 h-4" />
+          <div className="mt-2 flex flex-col sm:flex-row sm:items-end gap-x-6 gap-y-2">
+            <div className="shrink-0">
+              <span className="text-xl font-black text-slate-900">{formatCurrency(toplamSatis)}</span>
+              <p className="text-[11px] text-slate-500 mt-0.5">DengePOS + Suitable POS</p>
             </div>
-          </div>
-          <div className="mt-2">
-            <span className="text-xl font-black text-emerald-700">{formatCurrency(hesaplananNakit)}</span>
-            <p className={`text-[11px] font-semibold mt-0.5 ${kasaFarki === 0 ? 'text-emerald-600' : kasaFarki < 0 ? 'text-rose-600' : 'text-blue-600'}`}>
-              {kasaFarki === 0
-                ? '✓ Kasa tam'
-                : kasaFarki < 0
-                ? `${formatCurrency(Math.abs(kasaFarki))} Açık`
-                : `${formatCurrency(kasaFarki)} Fazla`}
-            </p>
+            <table className="flex-1 text-xs">
+              <thead>
+                <tr className="text-[10px] font-semibold text-slate-400">
+                  <th className="text-left font-semibold" />
+                  <th className="text-right font-semibold px-2">Satış</th>
+                  <th className="text-right font-semibold px-2">Fiş Sayısı</th>
+                  <th className="text-right font-semibold pl-2">Ortalama</th>
+                </tr>
+              </thead>
+              <tbody>
+                {kirilim.map((r) => (
+                  <tr key={r.ad} className="border-t border-slate-100">
+                    <td className={`py-0.5 ${r.bold ? 'font-extrabold text-slate-900' : 'font-bold text-slate-700'}`}>{r.ad}</td>
+                    <td className="py-0.5 px-2 text-right font-bold text-slate-800 whitespace-nowrap">{formatCurrency(r.satis)}</td>
+                    <td className="py-0.5 px-2 text-right font-bold text-slate-800">{formatNumber(r.fis)}</td>
+                    <td className="py-0.5 pl-2 text-right font-bold text-slate-800 whitespace-nowrap">
+                      {formatCurrency(r.fis > 0 ? r.satis / r.fis : 0)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
 

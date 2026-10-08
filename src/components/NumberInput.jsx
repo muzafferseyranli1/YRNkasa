@@ -25,6 +25,14 @@ export const evaluateExpression = (text) => {
   }
 };
 
+// Odakta değilken 1.000,00 (tr-TR) biçiminde gösterir; step="1" olan alanlar (adet) ondalıksız: 1.000
+export const formatDisplay = (value, decimals) => {
+  if (value === undefined || value === null || value === "") return "";
+  const n = Number(value);
+  if (!isFinite(n)) return String(value);
+  return n.toLocaleString("tr-TR", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+};
+
 export default function NumberInput({
   value,
   onChange,
@@ -45,7 +53,8 @@ export default function NumberInput({
 
   const emit = (v) => onChange?.({ target: { value: v } });
 
-  const shown = focused ? draft : (value === undefined || value === null ? '' : String(value));
+  const decimals = String(step) === '1' ? 0 : 2;
+  const shown = focused ? draft : formatDisplay(value, decimals);
   const pending = focused && HAS_OPERATOR.test(draft);
 
   const commit = () => {
@@ -115,6 +124,7 @@ export default function NumberInput({
           }
         }}
         className={className}
+        style={{ textAlign: "left", ...rest.style }}
         {...rest}
       />
       {focused && (

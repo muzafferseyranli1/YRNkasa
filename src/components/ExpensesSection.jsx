@@ -2,7 +2,6 @@ import React, { useState, useRef } from 'react';
 import { ArrowDownCircle, Plus, Trash2, Camera, Image, Eye, Loader2, Sparkles } from 'lucide-react';
 import { formatCurrency, num } from '../utils/calculations';
 import ImageViewerModal from './ImageViewerModal';
-import ScanReceiptModal from './ScanReceiptModal';
 import { apiFetch, assetUrl } from '../utils/api';
 
 import NumberInput from './NumberInput';
@@ -10,7 +9,6 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
   const [activeViewerImage, setActiveViewerImage] = useState(null);
   const [activeViewerTitle, setActiveViewerTitle] = useState('');
   const [activeViewerIndex, setActiveViewerIndex] = useState(null);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [uploadingIndex, setUploadingIndex] = useState(null);
 
   const fileInputRefs = useRef({});
@@ -61,39 +59,6 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
     }
   };
 
-  // Handle OCR Scan from Camera
-  const handleScanApply = async (parsed, previewUrl) => {
-    const id = 'h_' + Date.now();
-    let receiptUrl = null;
-
-    // If there's an image file from scanner, upload it
-    if (previewUrl && previewUrl.startsWith('blob:')) {
-      try {
-        const blob = await fetch(previewUrl).then((r) => r.blob());
-        const formData = new FormData();
-        formData.append('file', blob, 'scanned-receipt.jpg');
-        const res = await apiFetch('/api/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.success) {
-          receiptUrl = data.url;
-        }
-      } catch (e) {
-        console.error('Failed to upload scanned image:', e);
-      }
-    }
-
-    const newItem = {
-      id,
-      title: parsed.title || 'Taranan Masraf',
-      tutar: parsed.tutar || 0,
-      aciklama: '',
-      isKK: false,
-      receiptImage: receiptUrl,
-    };
-
-    onChange([...harcamalar, newItem]);
-  };
-
   const nakitGider = (harcamalar || [])
     .filter((h) => !h.isKK)
     .reduce((acc, h) => acc + num(h.tutar), 0);
@@ -127,15 +92,6 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
               <span className="text-sm font-bold text-indigo-600">{formatCurrency(kkGider)}</span>
             </div>
           )}
-
-          <button
-            onClick={() => setIsScannerOpen(true)}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-xs font-bold transition-colors shadow-2xs"
-            title="Telefon kamerasını fişe tutarak otomatik okut"
-          >
-            <Camera className="w-4 h-4 text-blue-600" />
-            <span>📸 Fiş Tara (OCR)</span>
-          </button>
 
           <button
             onClick={handleAdd}
@@ -304,14 +260,6 @@ export default function ExpensesSection({ harcamalar = [], onChange }) {
         }}
       />
 
-      {/* OCR Fiş Tarayıcı Modal */}
-      <ScanReceiptModal
-        isOpen={isScannerOpen}
-        onClose={() => setIsScannerOpen(false)}
-        mode="expense"
-        title="Masraf / Gider Fişi Tara (OCR)"
-        onApply={handleScanApply}
-      />
     </div>
   );
 }

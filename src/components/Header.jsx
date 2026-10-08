@@ -6,6 +6,7 @@ export default function Header({
   onDateChange,
   onSave,
   onPrint,
+  onOpenA4,
   onOpenHistory,
   isSaving,
   hasUnsavedChanges,
@@ -108,6 +109,15 @@ export default function Header({
             >
               <History className="w-4 h-4 text-slate-600" />
               <span className="hidden sm:inline">Geçmiş</span>
+            </button>
+
+            <button
+              onClick={onOpenA4}
+              className="flex items-center space-x-1.5 px-3.5 py-2 text-sm font-medium bg-indigo-100 hover:bg-indigo-200 text-indigo-900 rounded-xl transition-colors shadow-xs"
+              title="A4 tek sayfa gün sonu raporu (grafikli)"
+            >
+              <Printer className="w-4 h-4 text-indigo-800" />
+              <span>A4 Rapor</span>
             </button>
 
             <button

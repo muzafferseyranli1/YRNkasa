@@ -43,14 +43,14 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
   const removeRow = (rowId) => update({ satirlar: satirlar.filter((r) => r.id !== rowId) });
 
   return (
-    <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
+    <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-2">
         <div className="flex items-center space-x-2.5">
           <div className="p-2 bg-orange-100 text-orange-700 rounded-xl">
             <LayoutGrid className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">Marka / Kanal Kırılımlı Ciro</h2>
+            <h2 className="text-base font-bold text-slate-900">Satış Kanalları Dökümü</h2>
             <p className="text-xs text-slate-500">Kağıt rapor: kanal bazında ciro, kişi ve paket sayıları (marka sütunları)</p>
           </div>
         </div>
@@ -88,15 +88,18 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
         </div>
       )}
 
-      <div className="mt-4 overflow-x-auto">
-        <table className="w-full text-xs">
+      <div className="mt-4">
+        <table className="w-full text-xs table-fixed">
+          <colgroup>
+            {Array.from({ length: 6 * (markalar.length + 2) }, (_, i) => <col key={i} />)}
+          </colgroup>
           <thead>
             <tr>
-              <th rowSpan={2} className="text-left px-1 py-1.5 text-[11px] font-bold uppercase text-slate-500 align-bottom">
+              <th rowSpan={2} colSpan={6} className="text-left px-1 py-1.5 text-[11px] font-bold uppercase text-slate-500 align-bottom">
                 Kanal
               </th>
               {markalar.map((mk) => (
-                <th key={mk.id} colSpan={3} className="px-1 pt-1.5">
+                <th key={mk.id} colSpan={6} className="px-1 pt-1.5">
                   <input
                     type="text"
                     value={mk.name}
@@ -105,40 +108,47 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                   />
                 </th>
               ))}
-              <th colSpan={3} className="px-2 pt-1.5 text-[11px] font-bold uppercase text-slate-600">
+              <th colSpan={6} className="px-2 pt-1.5 text-[11px] font-bold uppercase text-slate-600">
                 Toplam
               </th>
-              <th rowSpan={2} className="w-6" />
             </tr>
             <tr className="text-[10px] font-semibold text-slate-400">
               {[...markalar, { id: '_t' }].map((mk) => (
                 <React.Fragment key={mk.id}>
-                  <th className="px-1 pb-1 text-right">Ciro ₺</th>
-                  <th className="px-1 pb-1 text-right text-sky-600" title="Platformun online tahsil ettiği, bize ödeyeceği tutar (alacak)">
-                    Online Alacak ₺
+                  <th colSpan={2} className="px-1 pb-1 text-right">Ciro ₺</th>
+                  <th colSpan={2} className="px-1 pb-1 text-right text-sky-600" title="Platformun online tahsil ettiği, bize ödeyeceği tutar (alacak)">
+                    Online ₺
                   </th>
-                  <th className="px-1 pb-1 text-center w-14">Adet</th>
+                  <th colSpan={2} className="px-1 pb-1 text-left">Adet</th>
                 </React.Fragment>
               ))}
             </tr>
           </thead>
           <tbody>
             {satirlar.map((row) => (
-              <tr key={row.id} className="border-t border-slate-100">
-                <td className="px-1 py-1 whitespace-nowrap">
+              <tr key={row.id} className="group border-t border-slate-100">
+                <td colSpan={6} className="relative px-1 py-1 whitespace-nowrap">
                   <input
                     type="text"
                     value={row.name}
                     onChange={(e) => setRowName(row.id, e.target.value)}
-                    className="w-full font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-orange-500 outline-none py-0.5"
+                    className="w-full pr-6 font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-orange-500 outline-none py-0.5"
                   />
                   {row.sayiTuru === 'kisi' && (
                     <span className="block text-[9px] font-normal text-slate-400 leading-none">adet = kişi sayısı</span>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => removeRow(row.id)}
+                    className="absolute right-1 top-1/2 -translate-y-1/2 p-1 text-slate-300 opacity-0 group-hover:opacity-100 hover:text-rose-500 focus:opacity-100"
+                    title="Kanalı kaldır"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
                 </td>
                 {markalar.map((mk) => (
                   <React.Fragment key={mk.id}>
-                    <td className="px-1 py-1 min-w-[84px]">
+                    <td colSpan={2} className="px-1 py-1">
                       <NumberInput
                         type="number"
                         value={row.ciro?.[mk.id] ?? ''}
@@ -146,7 +156,7 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                         className={cell}
                       />
                     </td>
-                    <td className="px-1 py-1 min-w-[84px]">
+                    <td colSpan={2} className="px-1 py-1">
                       <NumberInput
                         type="number"
                         value={row.online?.[mk.id] ?? ''}
@@ -154,76 +164,62 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                         className={cell + ' !border-sky-200 !bg-sky-50/40'}
                       />
                     </td>
-                    <td className="px-0.5 py-1 w-14">
+                    <td colSpan={2} className="px-1 py-1">
                       <NumberInput
                         type="number"
                         step="1"
                         value={row.adet?.[mk.id] ?? ''}
                         onChange={(e) => setValue(row.id, 'adet', mk.id, e.target.value)}
-                        className={cell + ' text-center !px-0.5'}
+                        className={cell + ' text-left !px-1.5'}
                       />
                     </td>
                   </React.Fragment>
                 ))}
-                <td className="px-2 py-1 text-right font-bold text-slate-800 whitespace-nowrap">
+                <td colSpan={2} className="px-2 py-1 text-right font-bold text-slate-800 whitespace-nowrap">
                   {formatCurrency(m.satirToplamlari[row.id]?.ciro || 0)}
                 </td>
-                <td className="px-2 py-1 text-right font-bold text-sky-700 whitespace-nowrap">
+                <td colSpan={2} className="px-2 py-1 text-right font-bold text-sky-700 whitespace-nowrap">
                   {formatCurrency(m.satirToplamlari[row.id]?.online || 0)}
                 </td>
-                <td className="px-1 py-1 text-center font-bold text-slate-700">
+                <td colSpan={2} className="px-1 py-1 text-left font-bold text-slate-700">
                   {formatNumber(m.satirToplamlari[row.id]?.adet || 0)}
-                </td>
-                <td className="px-0.5">
-                  <button
-                    type="button"
-                    onClick={() => removeRow(row.id)}
-                    className="text-slate-300 hover:text-rose-500 p-1"
-                    title="Kanalı kaldır"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
                 </td>
               </tr>
             ))}
             <tr className="border-t-2 border-slate-300 bg-orange-50/60">
-              <td className="px-1 py-1.5 font-extrabold text-slate-900 leading-tight">
+              <td colSpan={6} className="px-1 py-1.5 font-extrabold text-slate-900 leading-tight">
                 CİRO TOPLAM
                 <span className="block text-[10px] font-bold text-slate-500">TOPLAM PAKET SAYISI</span>
               </td>
               {markalar.map((mk) => (
                 <React.Fragment key={mk.id}>
-                  <td className="px-1 py-1.5 text-right font-bold text-orange-900 whitespace-nowrap">
+                  <td colSpan={2} className="px-1 py-1.5 text-right font-bold text-orange-900 whitespace-nowrap">
                     {formatCurrency(m.markaCiro[mk.id])}
                   </td>
-                  <td className="px-1 py-1.5 text-right font-bold text-sky-800 whitespace-nowrap">
+                  <td colSpan={2} className="px-1 py-1.5 text-right font-bold text-sky-800 whitespace-nowrap">
                     {formatCurrency(m.markaOnline[mk.id])}
                   </td>
-                  <td className="px-0.5 py-1.5 text-center font-bold text-orange-900">{formatNumber(m.markaPaket[mk.id])}</td>
+                  <td colSpan={2} className="px-1 py-1.5 text-left font-bold text-orange-900">{formatNumber(m.markaPaket[mk.id])}</td>
                 </React.Fragment>
               ))}
-              <td className="px-2 py-1.5 text-right font-black text-orange-700 whitespace-nowrap">
+              <td colSpan={2} className="px-2 py-1.5 text-right font-black text-orange-700 whitespace-nowrap">
                 {formatCurrency(m.ciroToplam)}
               </td>
-              <td className="px-2 py-1.5 text-right font-black text-sky-700 whitespace-nowrap">
+              <td colSpan={2} className="px-2 py-1.5 text-right font-black text-sky-700 whitespace-nowrap">
                 {formatCurrency(m.onlineToplam)}
               </td>
-              <td className="px-1 py-1.5 text-center font-black text-orange-700">{formatNumber(m.paketToplam)}</td>
-              <td />
+              <td colSpan={2} className="px-1 py-1.5 text-left font-black text-orange-700">{formatNumber(m.paketToplam)}</td>
             </tr>
             <tr className="bg-slate-50">
-              <td className="px-1 py-1.5 font-bold text-slate-700">TOPLAM KİŞİ SAYISI</td>
+              <td colSpan={6} className="px-1 py-1.5 font-bold text-slate-700">TOPLAM KİŞİ SAYISI</td>
               {markalar.map((mk) => (
                 <React.Fragment key={mk.id}>
-                  <td />
-                  <td />
-                  <td className="px-0.5 py-1.5 text-center font-semibold text-slate-700">{formatNumber(m.markaKisi[mk.id])}</td>
+                  <td colSpan={4} />
+                  <td colSpan={2} className="px-1 py-1.5 text-left font-semibold text-slate-700">{formatNumber(m.markaKisi[mk.id])}</td>
                 </React.Fragment>
               ))}
-              <td />
-              <td />
-              <td className="px-1 py-1.5 text-center font-bold text-slate-800">{formatNumber(m.kisiToplam)}</td>
-              <td />
+              <td colSpan={4} />
+              <td colSpan={2} className="px-1 py-1.5 text-left font-bold text-slate-800">{formatNumber(m.kisiToplam)}</td>
             </tr>
           </tbody>
         </table>

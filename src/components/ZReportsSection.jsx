@@ -1,23 +1,30 @@
 import React, { useState } from 'react';
-import { ReceiptText, Plus, Trash2, Smartphone, CreditCard, Camera, Sparkles } from 'lucide-react';
-import { formatCurrency, num } from '../utils/calculations';
-import ScanReceiptModal from './ScanReceiptModal';
+import { ReceiptText, Plus, Trash2, Smartphone, CreditCard, CheckCircle2, Landmark } from 'lucide-react';
+import { formatCurrency, num, BANKA_SAYISI } from '../utils/calculations';
 
 import NumberInput from './NumberInput';
-export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChange }) {
-  const [activeScanTarget, setActiveScanTarget] = useState(null); // { type: 'pos', index: 0 } or { type: 'meal' }
+export default function ZReportsSection({ zBilgileri = {}, onChange }) {
   const posCihazlari = zBilgileri.posCihazlari || [];
 
   const handleDeviceChange = (index, field, value) => {
     const nextDevices = [...posCihazlari];
     nextDevices[index] = {
       ...nextDevices[index],
-      [field]: field === 'name' || field === 'bankId' ? value : value === '' ? '' : Number(value) || 0,
+      [field]: field === 'name' ? value : value === '' ? '' : Number(value) || 0,
     };
     onChange({
       ...zBilgileri,
       posCihazlari: nextDevices,
     });
+  };
+
+  // Banka gün sonu tutarı: cihaz başına BANKA_SAYISI adet (aynı POS'ta birden fazla banka çalışabilir)
+  const handleBankChange = (index, slot, value) => {
+    const nextDevices = [...posCihazlari];
+    const banka = Array.from({ length: BANKA_SAYISI }, (_, i) => nextDevices[index].banka?.[i] ?? '');
+    banka[slot] = value === '' ? '' : Number(value) || 0;
+    nextDevices[index] = { ...nextDevices[index], banka };
+    onChange({ ...zBilgileri, posCihazlari: nextDevices });
   };
 
   const handleAddDevice = () => {
@@ -34,27 +41,6 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
       ...zBilgileri,
       posCihazlari: nextDevices,
     });
-  };
-
-  // Apply OCR scanned results
-  const handleScanApply = (parsed) => {
-    if (!activeScanTarget) return;
-
-    if (activeScanTarget.type === 'pos') {
-      const idx = activeScanTarget.index;
-      const nextDevices = [...posCihazlari];
-      nextDevices[idx] = {
-        ...nextDevices[idx],
-        nakit: parsed.nakit || nextDevices[idx].nakit || 0,
-        krediKarti: parsed.krediKarti || nextDevices[idx].krediKarti || 0,
-      };
-      onChange({
-        ...zBilgileri,
-        posCihazlari: nextDevices,
-      });
-    }
-
-    setActiveScanTarget(null);
   };
 
   const totalKesilenNakit = posCihazlari.reduce((acc, d) => acc + num(d.nakit), 0);
@@ -103,6 +89,11 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             {posCihazlari.map((device, idx) => {
               const deviceTotal = num(device.nakit) + num(device.krediKarti);
+              const bankaTutarlari = Array.from({ length: BANKA_SAYISI }, (_, i) => device.banka?.[i] ?? '');
+              const bankaToplam = bankaTutarlari.reduce((acc, v) => acc + num(v), 0);
+              const bankaGirildi = bankaTutarlari.some((v) => num(v) !== 0);
+              const bankaFark = bankaToplam - num(device.krediKarti);
+              const bankaEsit = bankaGirildi && Math.abs(bankaFark) <= 0.05;
               return (
                 <div
                   key={device.id || idx}
@@ -116,7 +107,7 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
                       className="text-xs font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-amber-500 outline-none px-0.5 py-0.5 flex-1 min-w-0 truncate"
                     />
 
-                    {/* İki kutunun toplamı (Nakit + Kredi Kartı) ve OCR Kamera Butonu */}
+                    {/* İki kutunun toplamı (Nakit + Kredi Kartı) */}
                     <div className="flex items-center space-x-1.5 flex-shrink-0">
                       <span
                         className="text-[11px] font-extrabold text-amber-950 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-md shadow-2xs whitespace-nowrap"
@@ -124,15 +115,6 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
                       >
                         Toplam: {formatCurrency(deviceTotal)}
                       </span>
-
-                      <button
-                        type="button"
-                        onClick={() => setActiveScanTarget({ type: 'pos', index: idx })}
-                        className="p-1 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                        title="Bu POS için Z Raporunu Kameradan Oku"
-                      >
-                        <Camera className="w-3.5 h-3.5" />
-                      </button>
 
                       <button
                         onClick={() => handleRemoveDevice(idx)}
@@ -143,24 +125,6 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
                       </button>
                     </div>
                   </div>
-
-                  {bankalar.length > 0 && (
-                    <div className="mb-2 flex items-center gap-2">
-                      <label className="text-[10px] font-medium text-slate-500 whitespace-nowrap">Banka:</label>
-                      <select
-                        value={device.bankId || ''}
-                        onChange={(e) => handleDeviceChange(idx, 'bankId', e.target.value)}
-                        className="flex-1 min-w-0 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-[11px] text-slate-700 outline-none focus:border-amber-500"
-                      >
-                        <option value="">Seçilmedi</option>
-                        {bankalar.map((b) => (
-                          <option key={b.id} value={b.id}>
-                            {b.name}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -174,14 +138,48 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-medium text-slate-500 mb-0.5">Kredi Kartı (TL)</label>
+                      <label className="flex items-center gap-1 text-[10px] font-medium text-slate-500 mb-0.5">
+                        <span>Kredi Kartı (TL)</span>
+                        {bankaEsit && (
+                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" title="Banka gün sonu toplamı kredi kartı ile eşit" />
+                        )}
+                      </label>
                       <NumberInput
                         type="number"
                         step="any"
                         value={device.krediKarti ?? 0}
                         onChange={(e) => handleDeviceChange(idx, 'krediKarti', e.target.value)}
-                        className="w-full bg-white border border-slate-200 rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
+                        className={`w-full bg-white border rounded-lg px-2 py-1 text-xs font-semibold text-slate-800 outline-none ${bankaEsit ? 'border-emerald-400 focus:border-emerald-500' : 'border-slate-200 focus:border-amber-500'}`}
                       />
+                    </div>
+                  </div>
+
+                  <div className="mt-2.5 pt-2 border-t border-slate-200/80">
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-sky-700">
+                        <Landmark className="w-3 h-3" />
+                        Banka Gün Sonu
+                      </span>
+                      {bankaGirildi && !bankaEsit && (
+                        <span className="text-[10px] font-bold text-rose-600">
+                          {bankaFark < 0 ? 'Eksik' : 'Fazla'} {formatCurrency(Math.abs(bankaFark))}
+                        </span>
+                      )}
+                      {bankaEsit && <span className="text-[10px] font-bold text-emerald-600">Toplam {formatCurrency(bankaToplam)}</span>}
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {bankaTutarlari.map((v, slot) => (
+                        <div key={slot}>
+                          <label className="block text-[9px] font-medium text-slate-400 mb-0.5">Banka {slot + 1}</label>
+                          <NumberInput
+                            type="number"
+                            step="any"
+                            value={v}
+                            onChange={(e) => handleBankChange(idx, slot, e.target.value)}
+                            className="w-full bg-white border border-slate-200 rounded-md px-1.5 py-1 text-[11px] font-semibold text-slate-800 focus:border-sky-500 outline-none"
+                          />
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>
@@ -191,14 +189,6 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
         </div>
       </div>
 
-      {/* OCR Z Raporu Tarayıcı Modal */}
-      <ScanReceiptModal
-        isOpen={!!activeScanTarget}
-        onClose={() => setActiveScanTarget(null)}
-        mode="pos"
-        title="Z Raporu / Fiş Tara (OCR)"
-        onApply={handleScanApply}
-      />
     </div>
   );
 }

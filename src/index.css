@@ -16,11 +16,15 @@
   }
 
   *, *:before, *:after {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Adisyon çıktısı tamamen siyah-beyaz */
+  .thermal-receipt-container, .thermal-receipt-container * {
     color: #000000 !important;
     text-shadow: none !important;
     box-shadow: none !important;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
   }
 
   html, body {
@@ -59,6 +63,34 @@
 
   .no-print {
     display: none !important;
+  }
+
+  /* A4 gün sonu raporu: yalnızca rapor sayfası yazdırılır */
+  body.printing-a4 {
+    width: 210mm !important;
+    background: #ffffff !important;
+  }
+  html:has(body.printing-a4) {
+    width: 210mm !important;
+  }
+  body.printing-a4 #root,
+  body.printing-a4 .thermal-receipt-container,
+  body.printing-a4 .a4-toolbar {
+    display: none !important;
+  }
+  body.printing-a4 .a4-overlay {
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body.printing-a4 .a4-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 210mm !important;
+    height: 296mm !important;
+    break-after: avoid;
+    page-break-after: avoid;
   }
 }
 

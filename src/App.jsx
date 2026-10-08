@@ -13,6 +13,7 @@ import SummaryCards from './components/SummaryCards';
 import KanalCiroSection from './components/KanalCiroSection';
 import BankaGunSonuSection from './components/BankaGunSonuSection';
 import ThermalReceipt from './components/ThermalReceipt';
+import A4Report from './components/A4Report';
 import HistoryModal from './components/HistoryModal';
 import CourierReportsView from './components/reports/CourierReportsView';
 import TipReportsView from './components/reports/TipReportsView';
@@ -38,6 +39,7 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isA4Open, setIsA4Open] = useState(false);
 
   // Fetch report for selected date
   const loadReport = useCallback(async (dateToLoad) => {
@@ -140,6 +142,7 @@ export default function App() {
         }}
         onSave={handleSave}
         onPrint={handlePrint}
+        onOpenA4={() => setIsA4Open(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
@@ -173,35 +176,36 @@ export default function App() {
                 onChange={(newGiris) => updateData({ kasaGiris: newGiris })}
               />
 
-              {/* 3. POS Satışları (DengePOS & Suitable POS) */}
-              <PosSalesSection
-                dengePos={data.dengePos}
-                suitablePos={data.suitablePos}
-                kanalOnlineToplam={metrics?.kanalOnlineToplam || 0}
-                onChangeDenge={(newDenge) => updateData({ dengePos: newDenge })}
-                onChangeSuitable={(newSuitable) => updateData({ suitablePos: newSuitable })}
-              />
+              {/* 3. Ödeme Tipleri + Satış Kanalları Dökümü (tek çerçeve) */}
+                <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs overflow-x-auto">
+                <div className="min-w-[1100px] space-y-8">
+                <PosSalesSection
+                  markalar={data.kanalCiro?.markalar || []}
+                  posMarka={data.posMarka}
+                  dengePos={data.dengePos}
+                  suitablePos={data.suitablePos}
+                  kanalOnlineToplam={metrics?.kanalOnlineToplam || 0}
+                  onChange={(patch) => updateData(patch)}
+                />
 
-              {/* 3b. Marka / Kanal Kırılımlı Ciro (kağıt form) */}
-              <KanalCiroSection
-                kanalCiro={data.kanalCiro}
-                toplamSatis={metrics?.toplamSatis || 0}
-                onChange={(newKanal) => updateData({ kanalCiro: newKanal })}
-              />
+                <KanalCiroSection
+                  kanalCiro={data.kanalCiro}
+                  toplamSatis={metrics?.toplamSatis || 0}
+                  onChange={(newKanal) => updateData({ kanalCiro: newKanal })}
+                />
+              </div>
+              </div>
 
               {/* 4. Z Bilgileri (POS Cihazları & Yemek Kartları) */}
               <ZReportsSection
                 zBilgileri={data.zBilgileri}
-                bankalar={data.bankaGunSonu || []}
                 onChange={(newZ) => updateData({ zBilgileri: newZ })}
               />
 
-              {/* 4b. Banka Gün Sonu Raporları (Z kredi kartı ile karşılaştırma) */}
+              {/* 4b. Yemek Kartı Gün Sonu */}
               <BankaGunSonuSection
-                bankalar={data.bankaGunSonu || []}
                 zBilgileri={data.zBilgileri}
                 metrics={metrics}
-                onChange={(newBankalar) => updateData({ bankaGunSonu: newBankalar })}
                 onChangeZ={(newZ) => updateData({ zBilgileri: newZ })}
               />
 
@@ -254,6 +258,9 @@ export default function App() {
       {data && metrics && (
         <ThermalReceipt date={selectedDate} data={data} metrics={metrics} />
       )}
+
+      {/* A4 Gün Sonu Rapor Sayfası */}
+      <A4Report open={isA4Open} onClose={() => setIsA4Open(false)} date={selectedDate} data={data} metrics={metrics} />
 
       {/* Geçmiş Raporlar Modalı */}
       <HistoryModal
