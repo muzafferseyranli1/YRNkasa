@@ -1,6 +1,6 @@
 /**
  * POS Z Raporları, DengePOS Balans Raporları, Suitable POS ve Masraf Fişleri için Akıllı OCR Ayrıştırıcı.
- * ML Kit / Tesseract çıktısındaki harf-rakam hatalarına karşı matematiksel çapraz kontroller içerir
+ * Tesseract çıktısındaki harf-rakam hatalarına karşı matematiksel çapraz kontroller içerir
  * (ör. Satış Toplamı = Nakit + Kredi, Ödemeler Toplamı = ödeme kalemlerinin toplamı).
  */
 
@@ -120,49 +120,6 @@ const amountForLabel = (blockLines, i) => {
 const indexOfLine = (lines, test, from = 0) => {
   for (let i = from; i < lines.length; i++) if (test(normalizeTurkish(lines[i]), lines[i])) return i;
   return -1;
-};
-
-// ---------------------------------------------------------------------------
-// Satır yeniden kurma (ML Kit / Tesseract kutularından)
-// ---------------------------------------------------------------------------
-
-/**
- * [{ text, left, top, right, bottom }] -> aynı hizadaki parçaları tek satırda birleştirilmiş metin.
- * ML Kit etiketleri ve tutarları ayrı bloklar halinde döndürebilir; y konumuna göre birleştirmek bunu çözer.
- */
-export const buildRowsFromBoxes = (boxes) => {
-  const items = (boxes || [])
-    .filter((b) => b && b.text && String(b.text).trim())
-    .map((b) => ({
-      text: String(b.text).trim(),
-      left: b.left ?? 0,
-      cy: ((b.top ?? 0) + (b.bottom ?? 0)) / 2,
-      h: Math.max(1, (b.bottom ?? 0) - (b.top ?? 0)),
-    }));
-  if (!items.length) return '';
-
-  const heights = items.map((i) => i.h).sort((a, b) => a - b);
-  const medianH = heights[Math.floor(heights.length / 2)];
-  items.sort((a, b) => a.cy - b.cy);
-
-  const rows = [];
-  for (const it of items) {
-    const row = rows[rows.length - 1];
-    if (row && Math.abs(it.cy - row.cy) <= medianH * 0.6) {
-      row.items.push(it);
-      row.cy = row.items.reduce((s, x) => s + x.cy, 0) / row.items.length;
-    } else {
-      rows.push({ cy: it.cy, items: [it] });
-    }
-  }
-  return rows
-    .map((r) =>
-      r.items
-        .sort((a, b) => a.left - b.left)
-        .map((i) => i.text)
-        .join('   ')
-    )
-    .join('\n');
 };
 
 // ---------------------------------------------------------------------------

@@ -1,9 +1,7 @@
 node_modules
 dist
-android
 .git
 .gitignore
-*.apk
 *.log
 .env*
 .system_generated

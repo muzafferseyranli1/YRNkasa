@@ -1,13 +1,8 @@
 /**
- * API client with automatic Base URL detection, bearer-token auth,
- * and automatic fallback (Domain <-> Direct VPS IP) for 100% uptime on mobile.
+ * API client: aynı origin üzerinden (Express hem API'yi hem arayüzü sunar) + bearer-token auth.
  */
 
 const TOKEN_KEY = 'yrnkasa_token';
-const PRIMARY_BASE = 'https://kasa.derinsoft.com.tr';
-const FALLBACK_BASE = 'http://188.132.198.144:3002';
-
-let activeBaseUrl = PRIMARY_BASE;
 
 export const getToken = () => {
   try {
@@ -26,80 +21,23 @@ export const setToken = (token) => {
   }
 };
 
-export const isNativeApp = () => {
-  return (
-    (typeof window !== 'undefined' && window.Capacitor?.isNativePlatform?.()) ||
-    (typeof window !== 'undefined' && window.location.protocol === 'file:')
-  );
-};
-
-export const getApiBaseUrl = () => {
-  if (isNativeApp()) {
-    return activeBaseUrl;
-  }
-  return '';
-};
-
 export const apiFetch = async (endpoint, options = {}) => {
-  const isNative = isNativeApp();
+  const headers = new Headers(options.headers || {});
   const token = getToken();
+  if (token && !headers.has('Authorization')) headers.set('Authorization', `Bearer ${token}`);
 
-  const makeRequest = async (baseUrl) => {
-    const url = endpoint.startsWith('http') ? endpoint : `${baseUrl}${endpoint}`;
-    const headers = new Headers(options.headers || {});
-    if (token && !headers.has('Authorization')) {
-      headers.set('Authorization', `Bearer ${token}`);
-    }
-    return fetch(url, { ...options, headers });
-  };
-
-  if (!isNative) {
-    // Web browser: relative request
-    const res = await makeRequest('');
-    if (res.status === 401 && !endpoint.startsWith('/api/auth/')) {
-      setToken('');
-      window.dispatchEvent(new Event('yrnkasa-auth-required'));
-    }
-    return res;
+  const res = await fetch(endpoint, { ...options, headers });
+  if (res.status === 401 && !endpoint.startsWith('/api/auth/')) {
+    setToken('');
+    window.dispatchEvent(new Event('yrnkasa-auth-required'));
   }
-
-  // Mobile App: Try active base URL first
-  try {
-    const res = await makeRequest(activeBaseUrl);
-    // If domain gives 502/503/504 Bad Gateway, try fallback IP
-    if (res.status >= 502 && res.status <= 504) {
-      throw new Error(`Gateway Error ${res.status}`);
-    }
-    if (res.status === 401 && !endpoint.startsWith('/api/auth/')) {
-      setToken('');
-      window.dispatchEvent(new Event('yrnkasa-auth-required'));
-    }
-    return res;
-  } catch (err) {
-    console.warn(`[API] ${activeBaseUrl} failed, trying fallback...`, err);
-    // Switch to fallback
-    const altBase = activeBaseUrl === PRIMARY_BASE ? FALLBACK_BASE : PRIMARY_BASE;
-    try {
-      const altRes = await makeRequest(altBase);
-      if (altRes.ok || altRes.status === 400 || altRes.status === 401) {
-        activeBaseUrl = altBase; // Cache working base URL
-      }
-      if (altRes.status === 401 && !endpoint.startsWith('/api/auth/')) {
-        setToken('');
-        window.dispatchEvent(new Event('yrnkasa-auth-required'));
-      }
-      return altRes;
-    } catch (altErr) {
-      throw altErr;
-    }
-  }
+  return res;
 };
 
-// <img src> / <a href> istekleri için URL oluşturucu
+// <img src> / <a href> istekleri başlık gönderemez; token sorgu parametresiyle eklenir
 export const assetUrl = (path) => {
   if (!path) return path;
-  if (path.startsWith('blob:') || path.startsWith('data:')) return path;
-  const url = path.startsWith('http') ? path : `${getApiBaseUrl()}${path}`;
+  if (path.startsWith('blob:') || path.startsWith('data:') || path.startsWith('http')) return path;
   const token = getToken();
-  return token ? `${url}${url.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : url;
+  return token ? `${path}${path.includes('?') ? '&' : '?'}token=${encodeURIComponent(token)}` : path;
 };

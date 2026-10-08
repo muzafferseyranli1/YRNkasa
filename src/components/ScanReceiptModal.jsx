@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Camera, Upload, X, Check, Loader2, Sparkles, AlertCircle, FileText, ChevronDown, ChevronUp, Store, ShoppingBag } from 'lucide-react';
 import { createWorker } from 'tesseract.js';
-import { parseReceiptText, buildRowsFromBoxes } from '../utils/ocrParser';
+import { parseReceiptText } from '../utils/ocrParser';
 import { formatCurrency } from '../utils/calculations';
 import { preprocessImageForOcr } from '../utils/imagePreprocess';
 
@@ -28,32 +28,15 @@ export default function ScanReceiptModal({ isOpen, onClose, onApply, mode = 'pos
     setProgressText('Görsel optimize ediliyor...');
 
     try {
-      let rawRecognizedText = '';
-
-      // Check if running on Android with Native Google ML Kit OCR
-      const NativeOcr = window.Capacitor?.Plugins?.NativeOcr;
-      if (NativeOcr) {
-        setProgressText('Google ML Kit ile taranıyor...');
-        const reader = new FileReader();
-        const base64Promise = new Promise((resolve) => {
-          reader.onload = (re) => resolve(re.target.result);
-          reader.readAsDataURL(file);
-        });
-        const base64Data = await base64Promise;
-        const res = await NativeOcr.recognizeText({ base64: base64Data });
-        // Etiket ve tutarı aynı satırda birleştir (ML Kit bunları ayrı bloklara bölebiliyor)
-        rawRecognizedText = (res.lines?.length ? buildRowsFromBoxes(res.lines) : '') || res.text || '';
-      } else {
-        // Web fallback: Preprocess image on canvas + Tesseract OCR
-        const preprocessedBlob = await preprocessImageForOcr(file);
-        setProgressText('Karakterler ve rakamlar taranıyor (OCR)...');
-        const worker = await createWorker('tur+eng');
-        // PSM 6: tek blok metin (fiş satırları); boşlukları koru ki etiket/tutar ayrımı bozulmasın
-        await worker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
-        const ret = await worker.recognize(preprocessedBlob);
-        await worker.terminate();
-        rawRecognizedText = ret.data.text || '';
-      }
+      // Tarayıcıda: görseli canvas'ta ön işle + Tesseract OCR
+      const preprocessedBlob = await preprocessImageForOcr(file);
+      setProgressText('Karakterler ve rakamlar taranıyor (OCR)...');
+      const worker = await createWorker('tur+eng');
+      // PSM 6: tek blok metin (fiş satırları); boşlukları koru ki etiket/tutar ayrımı bozulmasın
+      await worker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
+      const ret = await worker.recognize(preprocessedBlob);
+      await worker.terminate();
+      const rawRecognizedText = ret.data.text || '';
 
       setProgressText('Mali alanlar ve tutarlar ayrıştırılıyor...');
       const extracted = parseReceiptText(rawRecognizedText, mode);
