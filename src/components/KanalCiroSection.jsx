@@ -60,6 +60,10 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
             <span className="text-sm font-bold text-slate-800">{formatNumber(m.paketToplam)} Adet</span>
           </div>
           <div className="text-right">
+            <span className="text-[11px] font-medium text-slate-400 block">Online Alacak</span>
+            <span className="text-sm font-bold text-sky-700">{formatCurrency(m.onlineToplam)}</span>
+          </div>
+          <div className="text-right">
             <span className="text-[11px] font-medium text-slate-400 block">Ciro Toplam</span>
             <span className="text-base font-bold text-orange-600">{formatCurrency(m.ciroToplam)}</span>
           </div>
@@ -92,7 +96,7 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                 Kanal
               </th>
               {markalar.map((mk) => (
-                <th key={mk.id} colSpan={2} className="px-1 pt-1.5">
+                <th key={mk.id} colSpan={3} className="px-1 pt-1.5">
                   <input
                     type="text"
                     value={mk.name}
@@ -101,7 +105,7 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                   />
                 </th>
               ))}
-              <th colSpan={2} className="px-2 pt-1.5 text-[11px] font-bold uppercase text-slate-600">
+              <th colSpan={3} className="px-2 pt-1.5 text-[11px] font-bold uppercase text-slate-600">
                 Toplam
               </th>
               <th rowSpan={2} className="w-6" />
@@ -110,6 +114,9 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
               {[...markalar, { id: '_t' }].map((mk) => (
                 <React.Fragment key={mk.id}>
                   <th className="px-1 pb-1 text-right">Ciro ₺</th>
+                  <th className="px-1 pb-1 text-right text-sky-600" title="Platformun online tahsil ettiği, bize ödeyeceği tutar (alacak)">
+                    Online Alacak ₺
+                  </th>
                   <th className="px-1 pb-1 text-center w-14">Adet</th>
                 </React.Fragment>
               ))}
@@ -139,6 +146,14 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                         className={cell}
                       />
                     </td>
+                    <td className="px-1 py-1 min-w-[84px]">
+                      <NumberInput
+                        type="number"
+                        value={row.online?.[mk.id] ?? ''}
+                        onChange={(e) => setValue(row.id, 'online', mk.id, e.target.value)}
+                        className={cell + ' !border-sky-200 !bg-sky-50/40'}
+                      />
+                    </td>
                     <td className="px-0.5 py-1 w-14">
                       <NumberInput
                         type="number"
@@ -152,6 +167,9 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                 ))}
                 <td className="px-2 py-1 text-right font-bold text-slate-800 whitespace-nowrap">
                   {formatCurrency(m.satirToplamlari[row.id]?.ciro || 0)}
+                </td>
+                <td className="px-2 py-1 text-right font-bold text-sky-700 whitespace-nowrap">
+                  {formatCurrency(m.satirToplamlari[row.id]?.online || 0)}
                 </td>
                 <td className="px-1 py-1 text-center font-bold text-slate-700">
                   {formatNumber(m.satirToplamlari[row.id]?.adet || 0)}
@@ -178,11 +196,17 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                   <td className="px-1 py-1.5 text-right font-bold text-orange-900 whitespace-nowrap">
                     {formatCurrency(m.markaCiro[mk.id])}
                   </td>
+                  <td className="px-1 py-1.5 text-right font-bold text-sky-800 whitespace-nowrap">
+                    {formatCurrency(m.markaOnline[mk.id])}
+                  </td>
                   <td className="px-0.5 py-1.5 text-center font-bold text-orange-900">{formatNumber(m.markaPaket[mk.id])}</td>
                 </React.Fragment>
               ))}
               <td className="px-2 py-1.5 text-right font-black text-orange-700 whitespace-nowrap">
                 {formatCurrency(m.ciroToplam)}
+              </td>
+              <td className="px-2 py-1.5 text-right font-black text-sky-700 whitespace-nowrap">
+                {formatCurrency(m.onlineToplam)}
               </td>
               <td className="px-1 py-1.5 text-center font-black text-orange-700">{formatNumber(m.paketToplam)}</td>
               <td />
@@ -192,9 +216,11 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
               {markalar.map((mk) => (
                 <React.Fragment key={mk.id}>
                   <td />
+                  <td />
                   <td className="px-0.5 py-1.5 text-center font-semibold text-slate-700">{formatNumber(m.markaKisi[mk.id])}</td>
                 </React.Fragment>
               ))}
+              <td />
               <td />
               <td className="px-1 py-1.5 text-center font-bold text-slate-800">{formatNumber(m.kisiToplam)}</td>
               <td />

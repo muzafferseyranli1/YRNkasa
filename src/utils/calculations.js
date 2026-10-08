@@ -72,15 +72,18 @@ export const calculateKanalMetrics = (kanal) => {
   const markalar = kanal?.markalar || [];
   const satirlar = kanal?.satirlar || [];
   const markaCiro = {};
+  const markaOnline = {};
   const markaPaket = {};
   const markaKisi = {};
   markalar.forEach((m) => {
     markaCiro[m.id] = 0;
+    markaOnline[m.id] = 0;
     markaPaket[m.id] = 0;
     markaKisi[m.id] = 0;
   });
 
   let ciroToplam = 0;
+  let onlineToplam = 0;
   let paketToplam = 0;
   let kisiToplam = 0;
   let panelCiro = 0;
@@ -89,18 +92,23 @@ export const calculateKanalMetrics = (kanal) => {
 
   satirlar.forEach((row) => {
     let rowCiro = 0;
+    let rowOnline = 0;
     let rowAdet = 0;
     markalar.forEach((m) => {
       const c = num(row.ciro?.[m.id]);
+      const o = num(row.online?.[m.id]);
       const a = num(row.adet?.[m.id]);
       rowCiro += c;
+      rowOnline += o;
       rowAdet += a;
       markaCiro[m.id] += c;
+      markaOnline[m.id] += o;
       if (row.sayiTuru === 'kisi') markaKisi[m.id] += a;
       else markaPaket[m.id] += a;
     });
-    satirToplamlari[row.id] = { ciro: rowCiro, adet: rowAdet };
+    satirToplamlari[row.id] = { ciro: rowCiro, online: rowOnline, adet: rowAdet };
     ciroToplam += rowCiro;
+    onlineToplam += rowOnline;
     if (row.sayiTuru === 'kisi') kisiToplam += rowAdet;
     else paketToplam += rowAdet;
     if (row.panel) {
@@ -109,7 +117,7 @@ export const calculateKanalMetrics = (kanal) => {
     }
   });
 
-  return { markaCiro, markaPaket, markaKisi, ciroToplam, paketToplam, kisiToplam, panelCiro, panelPaket, satirToplamlari };
+  return { markaCiro, markaOnline, markaPaket, markaKisi, ciroToplam, onlineToplam, paketToplam, kisiToplam, panelCiro, panelPaket, satirToplamlari };
 };
 
 export const calculateReportMetrics = (data) => {
