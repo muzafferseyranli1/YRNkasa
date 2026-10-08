@@ -10,12 +10,14 @@ import CourierSection from './components/CourierSection';
 import TipSection from './components/TipSection';
 import FizikiKasaSection from './components/FizikiKasaSection';
 import SummaryCards from './components/SummaryCards';
+import KanalCiroSection from './components/KanalCiroSection';
+import BankaGunSonuSection from './components/BankaGunSonuSection';
 import ThermalReceipt from './components/ThermalReceipt';
 import HistoryModal from './components/HistoryModal';
 import CourierReportsView from './components/reports/CourierReportsView';
 import TipReportsView from './components/reports/TipReportsView';
 import ArchiveReportsView from './components/reports/ArchiveReportsView';
-import { calculateReportMetrics, getDefaultReportData } from './utils/calculations';
+import { calculateReportMetrics, getDefaultReportData, normalizeReportData } from './utils/calculations';
 import { apiFetch } from './utils/api';
 
 export default function App() {
@@ -44,7 +46,7 @@ export default function App() {
       const res = await apiFetch(`/api/reports/${dateToLoad}`);
       const json = await res.json();
       if (json.success) {
-        setData(json.report.data);
+        setData(normalizeReportData(json.report.data));
         setReportExists(json.exists);
         setSuggestedDevir(json.suggestedDevir || 0);
         setHasUnsavedChanges(false);
@@ -179,10 +181,25 @@ export default function App() {
                 onChangeSuitable={(newSuitable) => updateData({ suitablePos: newSuitable })}
               />
 
+              {/* 3b. Marka / Kanal Kırılımlı Ciro (kağıt form) */}
+              <KanalCiroSection
+                kanalCiro={data.kanalCiro}
+                toplamSatis={metrics?.toplamSatis || 0}
+                onChange={(newKanal) => updateData({ kanalCiro: newKanal })}
+              />
+
               {/* 4. Z Bilgileri (POS Cihazları & Yemek Kartları) */}
               <ZReportsSection
                 zBilgileri={data.zBilgileri}
+                bankalar={data.bankaGunSonu || []}
                 onChange={(newZ) => updateData({ zBilgileri: newZ })}
+              />
+
+              {/* 4b. Banka Gün Sonu Raporları (Z kredi kartı ile karşılaştırma) */}
+              <BankaGunSonuSection
+                bankalar={data.bankaGunSonu || []}
+                metrics={metrics}
+                onChange={(newBankalar) => updateData({ bankaGunSonu: newBankalar })}
               />
 
               {/* 5. Harcamalar & Kasa Çıkışları */}

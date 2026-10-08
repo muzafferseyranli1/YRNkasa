@@ -4,7 +4,7 @@ import { formatCurrency, num } from '../utils/calculations';
 import ScanReceiptModal from './ScanReceiptModal';
 
 import NumberInput from './NumberInput';
-export default function ZReportsSection({ zBilgileri = {}, onChange }) {
+export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChange }) {
   const [activeScanTarget, setActiveScanTarget] = useState(null); // { type: 'pos', index: 0 } or { type: 'meal' }
   const posCihazlari = zBilgileri.posCihazlari || [];
 
@@ -12,7 +12,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
     const nextDevices = [...posCihazlari];
     nextDevices[index] = {
       ...nextDevices[index],
-      [field]: field === 'name' ? value : value === '' ? '' : Number(value) || 0,
+      [field]: field === 'name' || field === 'bankId' ? value : value === '' ? '' : Number(value) || 0,
     };
     onChange({
       ...zBilgileri,
@@ -158,6 +158,24 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
                       </button>
                     </div>
                   </div>
+
+                  {bankalar.length > 0 && (
+                    <div className="mb-2 flex items-center gap-2">
+                      <label className="text-[10px] font-medium text-slate-500 whitespace-nowrap">Banka:</label>
+                      <select
+                        value={device.bankId || ''}
+                        onChange={(e) => handleDeviceChange(idx, 'bankId', e.target.value)}
+                        className="flex-1 min-w-0 bg-white border border-slate-200 rounded-md px-1.5 py-0.5 text-[11px] text-slate-700 outline-none focus:border-amber-500"
+                      >
+                        <option value="">Seçilmedi</option>
+                        {bankalar.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-2 gap-2">
                     <div>

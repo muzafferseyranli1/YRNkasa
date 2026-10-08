@@ -20,6 +20,83 @@ export const formatNumber = (val) => {
   return new Intl.NumberFormat('tr-TR').format(n);
 };
 
+export const getDefaultKanalCiro = () => ({
+  markalar: [
+    { id: 'pide', name: 'Pide' },
+    { id: 'tandir', name: 'Tandır' },
+    { id: 'kiymali', name: 'Kıymalı' },
+  ],
+  // sayiTuru: 'kisi' (restoran) veya 'paket'; panel: true ise platform (Yemek Sepeti, Getir...) sayılır
+  satirlar: [
+    { id: 'restoran', name: 'Restoran Ciro', sayiTuru: 'kisi', panel: false, ciro: {}, adet: {} },
+    { id: 'restoranPaket', name: 'Restoran Paket', sayiTuru: 'paket', panel: false, ciro: {}, adet: {} },
+    { id: 'yemeksepeti', name: 'Yemek Sepeti', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+    { id: 'getir', name: 'Getir', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+    { id: 'trendyol', name: 'Trendyol', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+    { id: 'migros', name: 'Migros', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+    { id: 'fuudy', name: 'Fuudy', sayiTuru: 'paket', panel: true, ciro: {}, adet: {} },
+  ],
+});
+
+export const getDefaultBankalar = () => [
+  { id: 'banka_1', name: 'Banka 1', tutar: '' },
+  { id: 'banka_2', name: 'Banka 2', tutar: '' },
+];
+
+// Eski kayıtlarda olmayan alanları varsayılanla tamamlar
+export const normalizeReportData = (data) => {
+  if (!data) return data;
+  return {
+    ...data,
+    kanalCiro: data.kanalCiro?.satirlar ? data.kanalCiro : getDefaultKanalCiro(),
+    bankaGunSonu: Array.isArray(data.bankaGunSonu) ? data.bankaGunSonu : getDefaultBankalar(),
+  };
+};
+
+export const calculateKanalMetrics = (kanal) => {
+  const markalar = kanal?.markalar || [];
+  const satirlar = kanal?.satirlar || [];
+  const markaCiro = {};
+  const markaPaket = {};
+  const markaKisi = {};
+  markalar.forEach((m) => {
+    markaCiro[m.id] = 0;
+    markaPaket[m.id] = 0;
+    markaKisi[m.id] = 0;
+  });
+
+  let ciroToplam = 0;
+  let paketToplam = 0;
+  let kisiToplam = 0;
+  let panelCiro = 0;
+  let panelPaket = 0;
+  const satirToplamlari = {};
+
+  satirlar.forEach((row) => {
+    let rowCiro = 0;
+    let rowAdet = 0;
+    markalar.forEach((m) => {
+      const c = num(row.ciro?.[m.id]);
+      const a = num(row.adet?.[m.id]);
+      rowCiro += c;
+      rowAdet += a;
+      markaCiro[m.id] += c;
+      if (row.sayiTuru === 'kisi') markaKisi[m.id] += a;
+      else markaPaket[m.id] += a;
+    });
+    satirToplamlari[row.id] = { ciro: rowCiro, adet: rowAdet };
+    ciroToplam += rowCiro;
+    if (row.sayiTuru === 'kisi') kisiToplam += rowAdet;
+    else paketToplam += rowAdet;
+    if (row.panel) {
+      panelCiro += rowCiro;
+      panelPaket += rowAdet;
+    }
+  });
+
+  return { markaCiro, markaPaket, markaKisi, ciroToplam, paketToplam, kisiToplam, panelCiro, panelPaket, satirToplamlari };
+};
+
 export const calculateReportMetrics = (data) => {
   if (!data) return {};
 
@@ -31,6 +108,8 @@ export const calculateReportMetrics = (data) => {
     zBilgileri = {},
     harcamalar = [],
     fizikiKasa = 0,
+    kanalCiro = null,
+    bankaGunSonu = [],
   } = data;
 
   // 1. DengePOS Satış Toplamı
@@ -134,6 +213,35 @@ export const calculateReportMetrics = (data) => {
   const panelPosTutarFarki = panelSiparisTutari - suitablePosToplam;
   const siparisSayisiFarki = panelSiparisSayisi - posPaketSiparisSayisi;
 
+  // 10b. Marka / kanal kırılımlı ciro (kağıt form)
+  const kanal = calculateKanalMetrics(kanalCiro);
+  const kanalGirildi = kanal.ciroToplam > 0 || kanal.paketToplam > 0 || kanal.kisiToplam > 0;
+  const kanalCiroFarki = kanalGirildi ? kanal.ciroToplam - toplamSatis : 0;
+  // Kanal tablosu girildiyse platform ciro/sayıları ondan alınır (Panel Bilgileri formu artık kullanılmıyor)
+  const panelTutar = kanalGirildi ? kanal.panelCiro : panelSiparisTutari;
+  const panelAdet = kanalGirildi ? kanal.panelPaket : panelSiparisSayisi;
+
+  // 10c. Banka gün sonu raporları vs POS Z kredi kartı (2 farklı banka)
+  const bankalar = bankaGunSonu || [];
+  const bankaToplam = bankalar.reduce((acc, b) => acc + num(b.tutar), 0);
+  const bankaGirildi = bankalar.some((b) => String(b.tutar ?? '') !== '' && num(b.tutar) !== 0);
+  const bankaDetay = bankalar.map((b) => {
+    const atananCihazlar = posCihazlari.filter((d) => d.bankId === b.id);
+    const zToplam = atananCihazlar.reduce((acc, d) => acc + num(d.krediKarti), 0);
+    return {
+      id: b.id,
+      name: b.name,
+      tutar: num(b.tutar),
+      zToplam,
+      cihazSayisi: atananCihazlar.length,
+      fark: atananCihazlar.length ? num(b.tutar) - zToplam : null,
+    };
+  });
+  const bankaAtanmamisZ = posCihazlari
+    .filter((d) => !bankalar.some((b) => b.id === d.bankId))
+    .reduce((acc, d) => acc + num(d.krediKarti), 0);
+  const bankaFarki = bankaGirildi ? bankaToplam - fizikiKrediKarti : 0;
+
   // 11. Yemek Kartları Mutabakatı
   const multinetHesaplanan = num(dengePos.multinet) + num(suitablePos.multinet);
   const multinetFiziki = num(zBilgileri.multinet);
@@ -174,11 +282,19 @@ export const calculateReportMetrics = (data) => {
     hesaplananKrediKarti,
     fizikiKrediKarti,
     krediKartiFarki,
-    panelSiparisTutari,
-    panelSiparisSayisi,
+    panelSiparisTutari: panelTutar,
+    panelSiparisSayisi: panelAdet,
     posPaketSiparisSayisi,
-    panelPosTutarFarki,
-    siparisSayisiFarki,
+    panelPosTutarFarki: panelTutar - suitablePosToplam,
+    siparisSayisiFarki: panelAdet - posPaketSiparisSayisi,
+    kanal,
+    kanalGirildi,
+    kanalCiroFarki,
+    bankaToplam,
+    bankaGirildi,
+    bankaFarki,
+    bankaDetay,
+    bankaAtanmamisZ,
     yemekKartlari: {
       multinet: { hesaplanan: multinetHesaplanan, fiziki: multinetFiziki, fark: multinetFark },
       sodexho: { hesaplanan: sodexhoHesaplanan, fiziki: sodexhoFiziki, fark: sodexhoFark },
@@ -245,6 +361,8 @@ export const getDefaultReportData = (devir = 0) => ({
   tipOdemeleri: [
     { id: 't_1', personelAdi: '', cekilenTip: 0, kesintiOrani: 20, kesintiTutari: 0, netNakitTip: 0, aciklama: '' },
   ],
+  kanalCiro: getDefaultKanalCiro(),
+  bankaGunSonu: getDefaultBankalar(),
   fizikiKasa: 0,
   notlar: '',
 });

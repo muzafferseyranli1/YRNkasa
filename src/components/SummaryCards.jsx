@@ -26,6 +26,12 @@ export default function SummaryCards({ metrics }) {
     fizikiKrediKarti = 0,
     krediKartiFarki = 0,
     yemekKartlari = {},
+    bankaGirildi = false,
+    bankaToplam = 0,
+    bankaFarki = 0,
+    kanalGirildi = false,
+    kanalCiroFarki = 0,
+    kanal = null,
   } = metrics;
 
   return (
@@ -138,6 +144,18 @@ export default function SummaryCards({ metrics }) {
                 <span>Kredi Kartı Farkı:</span>
                 <span>{formatCurrency(krediKartiFarki)} {krediKartiFarki < 0 ? '(Eksik Z)' : ''}</span>
               </div>
+              {bankaGirildi && (
+                <div className={`flex justify-between py-1 px-2 rounded-lg font-bold mt-1 ${Math.abs(bankaFarki) <= 0.05 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                  <span>Banka Gün Sonu ({formatCurrency(bankaToplam)}) − Z:</span>
+                  <span>{Math.abs(bankaFarki) <= 0.05 ? '✓ Tam' : formatCurrency(bankaFarki)}</span>
+                </div>
+              )}
+              {kanalGirildi && (
+                <div className={`flex justify-between py-1 px-2 rounded-lg font-bold mt-1 ${Math.abs(kanalCiroFarki) <= 0.05 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
+                  <span>Kanal Ciro ({formatCurrency(kanal?.ciroToplam || 0)}) − POS:</span>
+                  <span>{Math.abs(kanalCiroFarki) <= 0.05 ? '✓ Tam' : formatCurrency(kanalCiroFarki)}</span>
+                </div>
+              )}
             </div>
           </div>
         </div>
