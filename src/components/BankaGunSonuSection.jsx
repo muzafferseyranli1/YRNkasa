@@ -1,5 +1,5 @@
 import React from 'react';
-import { Landmark, Plus, Trash2, CheckCircle2, AlertTriangle } from 'lucide-react';
+import { Landmark, Plus, Trash2, CheckCircle2, AlertTriangle, UtensilsCrossed } from 'lucide-react';
 import { formatCurrency, num } from '../utils/calculations';
 import NumberInput from './NumberInput';
 
@@ -7,7 +7,7 @@ import NumberInput from './NumberInput';
  * Banka sisteminden alınan gün sonu (kapanış) raporu toplamları.
  * POS cihazlarına banka atanmışsa banka bazında, atanmamışsa genel toplamda Z kredi kartı ile karşılaştırılır.
  */
-export default function BankaGunSonuSection({ bankalar = [], metrics, onChange }) {
+export default function BankaGunSonuSection({ bankalar = [], zBilgileri = {}, metrics, onChange, onChangeZ }) {
   const detay = metrics?.bankaDetay || [];
   const bankaToplam = metrics?.bankaToplam || 0;
   const fizikiZ = metrics?.fizikiKrediKarti || 0;
@@ -37,8 +37,8 @@ export default function BankaGunSonuSection({ bankalar = [], metrics, onChange }
             <Landmark className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-base font-bold text-slate-900">Banka Gün Sonu (Kapanış) Raporları</h2>
-            <p className="text-xs text-slate-500">Bankanın POS gün sonu toplamı, Z raporundaki kredi kartı ile karşılaştırılır</p>
+            <h2 className="text-base font-bold text-slate-900">Gün Sonu Raporları (Banka & Yemek Kartı)</h2>
+            <p className="text-xs text-slate-500">Bankaların ve yemek kartı firmalarının gün sonu (kapanış) toplamları sistemdeki satışlarla karşılaştırılır</p>
           </div>
         </div>
         <div className="flex items-center space-x-4">
@@ -61,7 +61,8 @@ export default function BankaGunSonuSection({ bankalar = [], metrics, onChange }
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-4">
+      <div className="mt-4 grid grid-cols-1 xl:grid-cols-3 gap-4">
+      <div className="xl:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-3 content-start">
         {bankalar.map((b) => {
           const d = detay.find((x) => x.id === b.id);
           return (
@@ -104,6 +105,42 @@ export default function BankaGunSonuSection({ bankalar = [], metrics, onChange }
             </div>
           );
         })}
+      </div>
+
+      {/* Yemek kartı firmaları gün sonu */}
+      <div className="bg-slate-50 p-4 rounded-xl border border-slate-200/80 space-y-2.5">
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-1.5">
+          <UtensilsCrossed className="w-4 h-4" />
+          <span>Yemek Kartı Gün Sonu</span>
+        </h3>
+        {[
+          ['sodexho', 'Sodexho'],
+          ['multinet', 'Multinet'],
+          ['ticket', 'Ticket'],
+          ['setcard', 'Setcard'],
+        ].map(([key, label]) => {
+          const info = metrics?.yemekKartlari?.[key];
+          const fark = info?.fark || 0;
+          const ok = Math.abs(fark) <= 0.05;
+          const gosterFark = info && (info.hesaplanan !== 0 || info.fiziki !== 0);
+          return (
+            <div key={key}>
+              <label className="block text-xs font-medium text-slate-600 mb-1">{label} Gün Sonu Tutarı</label>
+              <NumberInput
+                type="number"
+                value={zBilgileri?.[key] ?? 0}
+                onChange={(e) => onChangeZ({ ...zBilgileri, [key]: e.target.value === '' ? '' : Number(e.target.value) || 0 })}
+                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:border-sky-500 outline-none"
+              />
+              {gosterFark && (
+                <div className={`mt-1 text-[10px] leading-tight ${ok ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  {ok ? `✓ Sistemle tutuyor (${formatCurrency(info.hesaplanan)})` : `Sistem: ${formatCurrency(info.hesaplanan)} · fark ${formatCurrency(fark)}`}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
       </div>
 
       {girildi && (

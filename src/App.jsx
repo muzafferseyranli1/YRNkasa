@@ -199,8 +199,10 @@ export default function App() {
               {/* 4b. Banka Gün Sonu Raporları (Z kredi kartı ile karşılaştırma) */}
               <BankaGunSonuSection
                 bankalar={data.bankaGunSonu || []}
+                zBilgileri={data.zBilgileri}
                 metrics={metrics}
                 onChange={(newBankalar) => updateData({ bankaGunSonu: newBankalar })}
+                onChangeZ={(newZ) => updateData({ zBilgileri: newZ })}
               />
 
               {/* 5. Harcamalar & Kasa Çıkışları */}

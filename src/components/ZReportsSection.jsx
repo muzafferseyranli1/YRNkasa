@@ -36,13 +36,6 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
     });
   };
 
-  const handleMealCardChange = (field, value) => {
-    onChange({
-      ...zBilgileri,
-      [field]: value === '' ? '' : Number(value) || 0,
-    });
-  };
-
   // Apply OCR scanned results
   const handleScanApply = (parsed) => {
     if (!activeScanTarget) return;
@@ -58,14 +51,6 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
       onChange({
         ...zBilgileri,
         posCihazlari: nextDevices,
-      });
-    } else if (activeScanTarget.type === 'meal') {
-      onChange({
-        ...zBilgileri,
-        sodexho: parsed.sodexho || zBilgileri.sodexho || 0,
-        multinet: parsed.multinet || zBilgileri.multinet || 0,
-        ticket: parsed.ticket || zBilgileri.ticket || 0,
-        setcard: parsed.setcard || zBilgileri.setcard || 0,
       });
     }
 
@@ -84,7 +69,7 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
           </div>
           <div>
             <h2 className="text-base font-bold text-slate-900">Z Bilgileri (Fiziki Cihaz & Z Raporları)</h2>
-            <p className="text-xs text-slate-500">POS cihazı gün sonu fişleri ve yemek kartı fiziki Z toplamları</p>
+            <p className="text-xs text-slate-500">POS cihazı gün sonu (Z) fişleri</p>
           </div>
         </div>
 
@@ -107,15 +92,15 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-4">
+      <div className="grid grid-cols-1 gap-6 mt-4">
         {/* POS Cihazları Listesi */}
-        <div className="lg:col-span-2 space-y-3">
+        <div className="space-y-3">
           <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center space-x-1.5">
             <Smartphone className="w-4 h-4" />
             <span>Fiziki POS Cihazları (Nakit & Kredi Kartı Fişleri)</span>
           </h3>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             {posCihazlari.map((device, idx) => {
               const deviceTotal = num(device.nakit) + num(device.krediKarti);
               return (
@@ -204,79 +189,14 @@ export default function ZReportsSection({ zBilgileri = {}, bankalar = [], onChan
             })}
           </div>
         </div>
-
-        {/* Yemek Kartları Fiziki Z */}
-        <div className="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200/80">
-          <div className="flex items-center justify-between">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center space-x-1.5">
-              <CreditCard className="w-4 h-4" />
-              <span>Yemek Kartları Fiziki Z</span>
-            </h3>
-            <button
-              type="button"
-              onClick={() => setActiveScanTarget({ type: 'meal' })}
-              className="flex items-center space-x-1 px-2 py-0.5 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded text-[11px] font-bold transition-colors"
-              title="Yemek kartı sliplerini kameradan tara"
-            >
-              <Camera className="w-3 h-3" />
-              <span>Slip Tara</span>
-            </button>
-          </div>
-
-          <div className="space-y-2.5">
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Sodexho Z Tutarı</label>
-              <NumberInput
-                type="number"
-                step="any"
-                value={zBilgileri?.sodexho ?? 0}
-                onChange={(e) => handleMealCardChange('sodexho', e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Multinet Z Tutarı</label>
-              <NumberInput
-                type="number"
-                step="any"
-                value={zBilgileri?.multinet ?? 0}
-                onChange={(e) => handleMealCardChange('multinet', e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Ticket Z Tutarı</label>
-              <NumberInput
-                type="number"
-                step="any"
-                value={zBilgileri?.ticket ?? 0}
-                onChange={(e) => handleMealCardChange('ticket', e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-600 mb-1">Setcard Z Tutarı</label>
-              <NumberInput
-                type="number"
-                step="any"
-                value={zBilgileri?.setcard ?? 0}
-                onChange={(e) => handleMealCardChange('setcard', e.target.value)}
-                className="w-full bg-white border border-slate-200 rounded-lg px-3 py-1.5 text-xs font-semibold text-slate-800 focus:border-amber-500 outline-none"
-              />
-            </div>
-          </div>
-        </div>
       </div>
 
       {/* OCR Z Raporu Tarayıcı Modal */}
       <ScanReceiptModal
         isOpen={!!activeScanTarget}
         onClose={() => setActiveScanTarget(null)}
-        mode={activeScanTarget?.type === 'meal' ? 'meal' : 'pos'}
-        title={activeScanTarget?.type === 'meal' ? 'Yemek Kartı Slipi Tara (OCR)' : 'Z Raporu / Fiş Tara (OCR)'}
+        mode="pos"
+        title="Z Raporu / Fiş Tara (OCR)"
         onApply={handleScanApply}
       />
     </div>
