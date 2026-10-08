@@ -244,6 +244,11 @@ export const calculateReportMetrics = (data) => {
   const panelTutar = kanalGirildi ? kanal.panelCiro : panelSiparisTutari;
   const panelAdet = kanalGirildi ? kanal.panelPaket : panelSiparisSayisi;
 
+  // 10b2. Suitable "Online Kredi Kartı" = kanal tablosundaki platform online alacaklarının toplamı (sağlama)
+  const kanalOnlineToplam = kanal.onlineToplam;
+  const onlineKontrolVar = kanalOnlineToplam > 0 || num(suitablePos.onlineKrediKarti) > 0;
+  const kanalOnlineFarki = onlineKontrolVar ? kanalOnlineToplam - num(suitablePos.onlineKrediKarti) : 0;
+
   // 10c. Banka gün sonu raporları vs POS Z kredi kartı (2 farklı banka)
   const bankalar = bankaGunSonu || [];
   const bankaToplam = bankalar.reduce((acc, b) => acc + num(b.tutar), 0);
@@ -313,6 +318,9 @@ export const calculateReportMetrics = (data) => {
     kanal,
     kanalGirildi,
     kanalCiroFarki,
+    kanalOnlineToplam,
+    onlineKontrolVar,
+    kanalOnlineFarki,
     bankaToplam,
     bankaGirildi,
     bankaFarki,

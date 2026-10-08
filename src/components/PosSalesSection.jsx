@@ -4,7 +4,7 @@ import { formatCurrency, num } from '../utils/calculations';
 import ScanReceiptModal from './ScanReceiptModal';
 
 import NumberInput from './NumberInput';
-export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, onChangeSuitable }) {
+export default function PosSalesSection({ dengePos, suitablePos, kanalOnlineToplam = 0, onChangeDenge, onChangeSuitable }) {
   const [activeScanModal, setActiveScanModal] = useState(null); // 'denge' | 'suitable' | null
 
   const handleDengeChange = (field, value) => {
@@ -247,6 +247,30 @@ export default function PosSalesSection({ dengePos, suitablePos, onChangeDenge, 
                 onChange={(e) => handleSuitableChange('onlineKrediKarti', e.target.value)}
                 className="w-full bg-blue-50/50 border border-blue-200 rounded-lg px-2.5 py-1.5 text-xs font-semibold text-slate-800 focus:bg-white focus:border-blue-500 outline-none"
               />
+              {(kanalOnlineToplam > 0 || num(suitablePos?.onlineKrediKarti) > 0) && (() => {
+                const fark = kanalOnlineToplam - num(suitablePos?.onlineKrediKarti);
+                const tamam = Math.abs(fark) <= 0.05;
+                return (
+                  <div className={`mt-1 text-[10px] leading-tight ${tamam ? 'text-emerald-600' : 'text-rose-600'}`}>
+                    {tamam ? (
+                      <span>✓ Kanal tablosu online alacak toplamı ile tutuyor</span>
+                    ) : (
+                      <span>
+                        Kanal tablosu online alacak toplamı: <b>{formatCurrency(kanalOnlineToplam)}</b> (fark {formatCurrency(fark)}){' '}
+                        {kanalOnlineToplam > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => handleSuitableChange('onlineKrediKarti', String(kanalOnlineToplam))}
+                            className="underline font-bold text-blue-700 hover:text-blue-900"
+                          >
+                            Toplamı uygula
+                          </button>
+                        )}
+                      </span>
+                    )}
+                  </div>
+                );
+              })()}
             </div>
 
             <div>

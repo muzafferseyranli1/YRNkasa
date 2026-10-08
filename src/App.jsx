@@ -177,6 +177,7 @@ export default function App() {
               <PosSalesSection
                 dengePos={data.dengePos}
                 suitablePos={data.suitablePos}
+                kanalOnlineToplam={metrics?.kanalOnlineToplam || 0}
                 onChangeDenge={(newDenge) => updateData({ dengePos: newDenge })}
                 onChangeSuitable={(newSuitable) => updateData({ suitablePos: newSuitable })}
               />

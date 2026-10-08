@@ -30,6 +30,9 @@ export default function SummaryCards({ metrics }) {
     bankaToplam = 0,
     bankaFarki = 0,
     kanalGirildi = false,
+    kanalOnlineToplam = 0,
+    onlineKontrolVar = false,
+    kanalOnlineFarki = 0,
     kanalCiroFarki = 0,
     kanal = null,
   } = metrics;
@@ -148,6 +151,12 @@ export default function SummaryCards({ metrics }) {
                 <div className={`flex justify-between py-1 px-2 rounded-lg font-bold mt-1 ${Math.abs(bankaFarki) <= 0.05 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
                   <span>Banka Gün Sonu ({formatCurrency(bankaToplam)}) − Z:</span>
                   <span>{Math.abs(bankaFarki) <= 0.05 ? '✓ Tam' : formatCurrency(bankaFarki)}</span>
+                </div>
+              )}
+              {onlineKontrolVar && (
+                <div className={`flex justify-between py-1 px-2 rounded-lg font-bold mt-1 ${Math.abs(kanalOnlineFarki) <= 0.05 ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-800'}`}>
+                  <span>Online Alacak ({formatCurrency(kanalOnlineToplam)}) − Suitable Online KK:</span>
+                  <span>{Math.abs(kanalOnlineFarki) <= 0.05 ? '✓ Tam' : formatCurrency(kanalOnlineFarki)}</span>
                 </div>
               )}
               {kanalGirildi && (
