@@ -528,12 +528,12 @@ export default function A4Report({ open, onClose, date, data, metrics }) {
         </div>
 
         {/* 9. Yemek çeki karşılaştırması */}
-        <Section title="Yemek Çeki · Dağılım / Z (Gün Sonu)">
+        <Section title="Yemek Çeki · Sistem / Z (Gün Sonu)">
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
                 <Th align="left">Kart</Th>
-                <Th>Ödeme dağılımı</Th>
+                <Th>Sistem</Th>
                 <Th>Z / gün sonu</Th>
                 <Th>Fark</Th>
               </tr>
