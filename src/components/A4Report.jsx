@@ -246,9 +246,8 @@ export default function A4Report({ open, onClose, date, data, metrics, prev = { 
   const ortPaketPrev = ortPrev.paket;
   const kasaFarki = metrics.kasaFarki || 0;
   const prevTag = hasPrev ? `geçen hf. ${shortDay(prevDate)}` : 'geçen hafta kaydı yok';
-  const MAXROWS = 6;
-
-  const maxCh = (arr) => arr.slice(0, MAXROWS);
+  // Masraf kalemlerinin hepsi gösterilir; 6'dan fazlaysa Masraflar tam genişlik ve 3 sütun olur
+  const cokMasraf = harcamalar.length > 6;
 
   return createPortal(
     <div className="a4-overlay" style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,23,42,0.65)', overflow: 'auto', padding: '16px 0' }}>
@@ -500,16 +499,21 @@ export default function A4Report({ open, onClose, date, data, metrics, prev = { 
         </Section>
 
         {/* 10-12. Masraflar · kurye · bahşiş */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1.15fr 1fr 1fr', gap: 6 }}>
-          <Section title="Masraflar" right={tl(metrics.toplamHarcamalar)}>
+        <div style={{ display: 'grid', gridTemplateColumns: cokMasraf ? '1fr 1fr' : '1.15fr 1fr 1fr', gap: 6 }}>
+          <Section title="Masraflar" right={tl(metrics.toplamHarcamalar)} style={cokMasraf ? { gridColumn: '1 / -1' } : undefined}>
             {harcamalar.length ? (
               <>
-                {maxCh(harcamalar).map((h) => (
-                  <Line key={h.id} label={`${h.title || 'Gider'}${h.aciklama ? ` (${String(h.aciklama).slice(0, 22)})` : ''}${h.isKK ? ' (KK)' : ''}`} value={tl(h.tutar)} color={h.isKK ? C.indigo : undefined} />
-                ))}
-                {harcamalar.length > MAXROWS && <Line label={`+${harcamalar.length - MAXROWS} kalem daha`} value="" color={C.mute} />}
-                <Line label="Nakit çıkan" value={tl(metrics.nakitHarcamalar)} bold top />
-                {metrics.kkHarcamalar > 0 && <Line label="KK ile ödenen" value={tl(metrics.kkHarcamalar)} color={C.indigo} />}
+                <div style={cokMasraf ? { columnCount: 3, columnGap: 14 } : undefined}>
+                  {harcamalar.map((h) => (
+                    <div key={h.id} style={{ breakInside: 'avoid' }}>
+                      <Line label={`${h.title || 'Gider'}${h.aciklama ? ` (${String(h.aciklama).slice(0, 22)})` : ''}${h.isKK ? ' (KK)' : ''}`} value={tl(h.tutar)} color={h.isKK ? C.indigo : undefined} />
+                    </div>
+                  ))}
+                </div>
+                <div style={cokMasraf ? { display: 'grid', gridTemplateColumns: '1fr 1fr', columnGap: 14 } : undefined}>
+                  <Line label="Nakit çıkan" value={tl(metrics.nakitHarcamalar)} bold top />
+                  {metrics.kkHarcamalar > 0 && <Line label="KK ile ödenen" value={tl(metrics.kkHarcamalar)} color={C.indigo} top={cokMasraf} />}
+                </div>
               </>
             ) : (
               <div style={{ fontSize: 9, color: C.mute, padding: '4px 0' }}>Gider girilmedi</div>
@@ -519,10 +523,9 @@ export default function A4Report({ open, onClose, date, data, metrics, prev = { 
           <Section title="Adisyon · Kurye Ödemeleri" right={tl(metrics.kuryeOdemeleriToplami)}>
             {kurye.length ? (
               <>
-                {maxCh(kurye).map((k, i) => (
+                {kurye.map((k, i) => (
                   <Line key={i} label={`${k.name} · ${formatNumber(k.count)}×${formatNumber(k.unit)}`} value={tl(k.total)} />
                 ))}
-                {kurye.length > MAXROWS && <Line label={`+${kurye.length - MAXROWS} kurye daha`} value="" color={C.mute} />}
                 <Line label={`${formatNumber(metrics.kuryeToplamSiparisSayisi)} sipariş toplam`} value={tl(metrics.kuryeOdemeleriToplami)} bold top />
               </>
             ) : (
@@ -533,10 +536,9 @@ export default function A4Report({ open, onClose, date, data, metrics, prev = { 
           <Section title="Bahşiş (Tip) Ödemeleri" right={tl(metrics.tipNetNakitToplami)}>
             {tips.length ? (
               <>
-                {maxCh(tips).map((t, i) => (
+                {tips.map((t, i) => (
                   <Line key={i} label={`${t.name} · kart ${tl(t.cekilen)}`} value={tl(t.net)} />
                 ))}
-                {tips.length > MAXROWS && <Line label={`+${tips.length - MAXROWS} kişi daha`} value="" color={C.mute} />}
                 <Line label={`Kesinti ${tl(metrics.tipKesintiToplami)}`} value="" color={C.mute} top />
                 <Line label="Net nakit ödenen" value={tl(metrics.tipNetNakitToplami)} bold />
               </>
