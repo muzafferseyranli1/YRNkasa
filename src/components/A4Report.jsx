@@ -508,8 +508,8 @@ export default function A4Report({ open, onClose, date, data, metrics }) {
             <Line label="Fark" value={ok(metrics.nakitFisFarki) ? '✓ Tam' : `${tl(metrics.nakitFisFarki)} ${metrics.nakitFisFarki < 0 ? '(eksik fiş)' : '(fazla fiş)'}`} bold tone={ok(metrics.nakitFisFarki) ? 'ok' : 'bad'} />
           </Section>
 
-          <Section title="Kredi Kartı · Dağılım / Z / Banka Gün Sonu">
-            <Line label="Ödeme dağılımı (satış KK)" value={tl(satisKK)} />
+          <Section title="Kredi Kartı · Sistem / Z / Banka Gün Sonu">
+            <Line label="Sistem satış kredi kartı" value={tl(satisKK)} />
             <Line label="+ Kartla çekilen bahşiş" value={tl(metrics.tipCekilenKartToplami)} />
             <Line label="= Sistem kredi kartı" value={tl(metrics.hesaplananKrediKarti)} bold top />
             <Line label="Z raporları (POS cihazları)" value={tl(metrics.fizikiKrediKarti)} bold />
