@@ -237,6 +237,15 @@ export default function ThermalReceipt({ date, data, metrics }) {
                     <span>{b.name}:</span>
                     <span className="font-black">{formatCurrency(b.tutar)}</span>
                   </div>
+                  {/* Cihazın Banka 1/2/3 kırılımı (yalnızca girilenler) */}
+                  {((zBilgileri.posCihazlari || []).find((d) => d.id === b.id)?.banka || []).map((v, slot) =>
+                    num(v) !== 0 ? (
+                      <div key={slot} className="flex justify-between pl-2 text-[11px]">
+                        <span>Banka {slot + 1}:</span>
+                        <span>{formatCurrency(v)}</span>
+                      </div>
+                    ) : null
+                  )}
                   {b.cihazSayisi > 0 && (
                     <div className="flex justify-between pl-2 text-[11px]">
                       <span>Z: {formatCurrency(b.zToplam)}</span>
