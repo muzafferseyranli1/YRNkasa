@@ -3,7 +3,7 @@ import { Wallet, PlusCircle } from 'lucide-react';
 import { formatCurrency, num } from '../utils/calculations';
 
 import NumberInput from './NumberInput';
-export default function KasaDevirSection({ data, onChange }) {
+export default function KasaDevirSection({ data, suggestedDevir = 0, previousDate = null, onChange }) {
   const devir = num(data?.devir);
   const kasayaParaKondu = num(data?.kasayaParaKondu);
   const toplamGiris = devir + kasayaParaKondu;
@@ -12,8 +12,14 @@ export default function KasaDevirSection({ data, onChange }) {
     onChange({
       ...data,
       [field]: value === '' ? '' : Number(value) || 0,
+      // Devir elle değiştirildiyse otomatik güncellemeden muaf tut
+      ...(field === 'devir' ? { devirManual: true } : {}),
     });
   };
+
+  const devirFarkli = !!previousDate && Math.abs(devir - num(suggestedDevir)) > 0.005;
+  const applySuggested = () => onChange({ ...data, devir: num(suggestedDevir), devirManual: false });
+  const fmtDay = (d) => (d ? d.split('-').reverse().join('.') : '');
 
   return (
     <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs">
@@ -50,6 +56,16 @@ export default function KasaDevirSection({ data, onChange }) {
             />
             <span className="absolute right-3.5 top-2.5 text-xs text-slate-400 pointer-events-none font-medium">₺</span>
           </div>
+          {devirFarkli && (
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 text-[11px] text-amber-700">
+              <span>
+                Önceki gün ({fmtDay(previousDate)}) sayımı: <b>{formatCurrency(suggestedDevir)}</b>
+              </span>
+              <button type="button" onClick={applySuggested} className="font-bold underline text-blue-700 hover:text-blue-900">
+                Uygula
+              </button>
+            </div>
+          )}
         </div>
 
         <div>

@@ -249,9 +249,15 @@ router.get('/:date', (req, res) => {
       } catch (e) {
         parsedData = getDefaultReportData(report.devir);
       }
+      // Önceki günün fiziki sayımı: kayıtlı günün devri bayatlamışsa istemci uyarır / günceller
+      const prevOfExisting = db
+        .prepare('SELECT date, fiziki_kasa FROM daily_reports WHERE date < ? ORDER BY date DESC LIMIT 1')
+        .get(date);
       return res.json({
         success: true,
         exists: true,
+        suggestedDevir: prevOfExisting ? prevOfExisting.fiziki_kasa : 0,
+        previousDate: prevOfExisting?.date || null,
         report: {
           date: report.date,
           data: parsedData,

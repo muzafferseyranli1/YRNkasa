@@ -35,6 +35,7 @@ export default function App() {
   const [data, setData] = useState(null);
   const [reportExists, setReportExists] = useState(false);
   const [suggestedDevir, setSuggestedDevir] = useState(0);
+  const [previousDate, setPreviousDate] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -48,10 +49,29 @@ export default function App() {
       const res = await apiFetch(`/api/reports/${dateToLoad}`);
       const json = await res.json();
       if (json.success) {
-        setData(normalizeReportData(json.report.data));
+        let loaded = normalizeReportData(json.report.data);
+        let devirRefreshed = false;
+
+        // Kayıtlı günün devri, önceki günün (sonradan değişmiş olabilecek) sayımıyla uyuşmuyorsa güncelle.
+        // Devir elle değiştirildiyse (devirManual) dokunma; yalnızca uyarı gösterilir.
+        if (json.exists && json.previousDate && !loaded.kasaGiris?.devirManual) {
+          const eski = Number(loaded.kasaGiris?.devir) || 0;
+          const yeni = Number(json.suggestedDevir) || 0;
+          if (Math.abs(eski - yeni) > 0.005) {
+            loaded = { ...loaded, kasaGiris: { ...loaded.kasaGiris, devir: yeni } };
+            devirRefreshed = true;
+            toast(
+              `Devir güncellendi: önceki günün sayımı ${yeni.toLocaleString('tr-TR')} ₺ (kayıtlı devir ${eski.toLocaleString('tr-TR')} ₺ idi). Kaydetmeyi unutmayın.`,
+              { id: 'devir-toast', icon: '⚠️', duration: 8000 }
+            );
+          }
+        }
+
+        setData(loaded);
         setReportExists(json.exists);
         setSuggestedDevir(json.suggestedDevir || 0);
-        setHasUnsavedChanges(false);
+        setPreviousDate(json.previousDate || null);
+        setHasUnsavedChanges(devirRefreshed);
 
         if (!json.exists && json.suggestedDevir > 0) {
           toast.success(
@@ -173,6 +193,8 @@ export default function App() {
               {/* 2. Kasa Devir & Girişler */}
               <KasaDevirSection
                 data={data.kasaGiris}
+                suggestedDevir={suggestedDevir}
+                previousDate={previousDate}
                 onChange={(newGiris) => updateData({ kasaGiris: newGiris })}
               />
 
