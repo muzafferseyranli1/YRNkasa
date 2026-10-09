@@ -126,7 +126,8 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
           </thead>
           <tbody>
             {satirlar.map((row) => (
-              <tr key={row.id} className="group border-t border-slate-100">
+              <React.Fragment key={row.id}>
+              <tr className="group border-t border-slate-100">
                 <td colSpan={6} className="relative px-1 py-1 whitespace-nowrap">
                   <input
                     type="text"
@@ -135,7 +136,7 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                     className="w-full pr-6 font-bold text-slate-800 bg-transparent border-b border-transparent hover:border-slate-300 focus:border-orange-500 outline-none py-0.5"
                   />
                   {row.sayiTuru === 'kisi' && (
-                    <span className="block text-[9px] font-normal text-slate-400 leading-none">adet = kişi sayısı</span>
+                    <span className="block text-[9px] font-normal text-slate-400 leading-none">adet = fiş sayısı</span>
                   )}
                   <button
                     type="button"
@@ -185,6 +186,32 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                   {formatNumber(m.satirToplamlari[row.id]?.adet || 0)}
                 </td>
               </tr>
+              {row.sayiTuru === 'kisi' && (
+                <tr>
+                  <td colSpan={6} className="px-1 pb-1 pl-4 text-[10px] font-semibold text-slate-400 whitespace-nowrap">
+                    ↳ Kişi sayısı <span className="font-normal">(bilgi, hesaplara girmez)</span>
+                  </td>
+                  {markalar.map((mk) => (
+                    <React.Fragment key={mk.id}>
+                      <td colSpan={4} />
+                      <td colSpan={2} className="px-1 pb-1">
+                        <NumberInput
+                          type="number"
+                          step="1"
+                          value={row.kisi?.[mk.id] ?? ''}
+                          onChange={(e) => setValue(row.id, 'kisi', mk.id, e.target.value)}
+                          className={cell + ' text-left !px-1.5 !bg-slate-50 !border-slate-200 !text-slate-600'}
+                        />
+                      </td>
+                    </React.Fragment>
+                  ))}
+                  <td colSpan={4} />
+                  <td colSpan={2} className="px-1 pb-1 text-left text-[11px] font-semibold text-slate-500">
+                    {formatNumber(m.satirToplamlari[row.id]?.kisi || 0)}
+                  </td>
+                </tr>
+              )}
+              </React.Fragment>
             ))}
             <tr className="border-t-2 border-slate-300 bg-orange-50/60">
               <td colSpan={6} className="px-1 py-1.5 font-extrabold text-slate-900 leading-tight">
@@ -211,7 +238,7 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
               <td colSpan={2} className="px-1 py-1.5 text-left font-black text-orange-700">{formatNumber(m.paketToplam)}</td>
             </tr>
             <tr className="bg-slate-50">
-              <td colSpan={6} className="px-1 py-1.5 font-bold text-slate-700">TOPLAM KİŞİ SAYISI</td>
+              <td colSpan={6} className="px-1 py-1.5 font-bold text-slate-700">TOPLAM KİŞİ SAYISI (BİLGİ)</td>
               {markalar.map((mk) => (
                 <React.Fragment key={mk.id}>
                   <td colSpan={4} />

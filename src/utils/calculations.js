@@ -33,7 +33,7 @@ const DEFAULT_KANAL_SATIRLARI = () => [
 ];
 const KANAL_VERSION = 2;
 
-// sayiTuru: 'kisi' (restoran) veya 'paket'; panel: true ise platform (Yemek Sepeti, Getir...) sayılır
+// sayiTuru: 'kisi' (salon: adet = FİŞ sayısı, ayrıca row.kisi = kişi sayısı/bilgi) veya 'paket'; panel: true ise platform (Yemek Sepeti, Getir...) sayılır
 export const getDefaultKanalCiro = () => ({
   v: KANAL_VERSION,
   markalar: [
@@ -91,18 +91,21 @@ export const calculateKanalMetrics = (kanal) => {
   const markaCiro = {};
   const markaOnline = {};
   const markaPaket = {};
-  const markaKisi = {};
+  const markaKisi = {}; // Salon kişi sayısı (yalnızca bilgi, hesaplarda kullanılmaz)
+  const markaSalonFis = {}; // Salon fiş sayısı (ortalama hesaplarında kullanılır)
   markalar.forEach((m) => {
     markaCiro[m.id] = 0;
     markaOnline[m.id] = 0;
     markaPaket[m.id] = 0;
     markaKisi[m.id] = 0;
+    markaSalonFis[m.id] = 0;
   });
 
   let ciroToplam = 0;
   let onlineToplam = 0;
   let paketToplam = 0;
   let kisiToplam = 0;
+  let salonFisToplam = 0;
   let panelCiro = 0;
   let panelPaket = 0;
   const satirToplamlari = {};
@@ -111,22 +114,27 @@ export const calculateKanalMetrics = (kanal) => {
     let rowCiro = 0;
     let rowOnline = 0;
     let rowAdet = 0;
+    let rowKisi = 0;
     markalar.forEach((m) => {
       const c = num(row.ciro?.[m.id]);
       const o = num(row.online?.[m.id]);
       const a = num(row.adet?.[m.id]);
+      const k = num(row.kisi?.[m.id]);
+      rowKisi += k;
+      markaKisi[m.id] += k;
       rowCiro += c;
       rowOnline += o;
       rowAdet += a;
       markaCiro[m.id] += c;
       markaOnline[m.id] += o;
-      if (row.sayiTuru === 'kisi') markaKisi[m.id] += a;
+      if (row.sayiTuru === 'kisi') markaSalonFis[m.id] += a;
       else markaPaket[m.id] += a;
     });
-    satirToplamlari[row.id] = { ciro: rowCiro, online: rowOnline, adet: rowAdet };
+    satirToplamlari[row.id] = { ciro: rowCiro, online: rowOnline, adet: rowAdet, kisi: rowKisi };
+    kisiToplam += rowKisi;
     ciroToplam += rowCiro;
     onlineToplam += rowOnline;
-    if (row.sayiTuru === 'kisi') kisiToplam += rowAdet;
+    if (row.sayiTuru === 'kisi') salonFisToplam += rowAdet;
     else paketToplam += rowAdet;
     if (row.panel) {
       panelCiro += rowCiro;
@@ -134,7 +142,7 @@ export const calculateKanalMetrics = (kanal) => {
     }
   });
 
-  return { markaCiro, markaOnline, markaPaket, markaKisi, ciroToplam, onlineToplam, paketToplam, kisiToplam, panelCiro, panelPaket, satirToplamlari };
+  return { markaCiro, markaOnline, markaPaket, markaKisi, markaSalonFis, ciroToplam, onlineToplam, paketToplam, kisiToplam, salonFisToplam, panelCiro, panelPaket, satirToplamlari };
 };
 
 export const calculateReportMetrics = (data) => {
@@ -258,7 +266,7 @@ export const calculateReportMetrics = (data) => {
 
   // 10b. Marka / kanal kırılımlı ciro (kağıt form)
   const kanal = calculateKanalMetrics(kanalCiro);
-  const kanalGirildi = kanal.ciroToplam > 0 || kanal.paketToplam > 0 || kanal.kisiToplam > 0;
+  const kanalGirildi = kanal.ciroToplam > 0 || kanal.paketToplam > 0 || kanal.salonFisToplam > 0;
   const kanalCiroFarki = kanalGirildi ? kanal.ciroToplam - toplamSatis : 0;
   // Kanal tablosu girildiyse platform ciro/sayıları ondan alınır (Panel Bilgileri formu artık kullanılmıyor)
   const panelTutar = kanalGirildi ? kanal.panelCiro : panelSiparisTutari;

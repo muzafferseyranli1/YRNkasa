@@ -155,7 +155,7 @@ export default function ThermalReceipt({ date, data, metrics }) {
                       <span className="font-black">{formatCurrency(t.ciro)}</span>
                     </div>
                     <div className="flex justify-between pl-2 text-[11px]">
-                      <span>{r.sayiTuru === 'kisi' ? `${formatNumber(t.adet)} kişi` : `${formatNumber(t.adet)} paket`}</span>
+                      <span>{r.sayiTuru === 'kisi' ? `${formatNumber(t.adet)} fiş${(t.kisi || 0) > 0 ? ` · ${formatNumber(t.kisi)} kişi` : ''}` : `${formatNumber(t.adet)} paket`}</span>
                       {(t.online || 0) !== 0 && <span>Online alacak: {formatCurrency(t.online)}</span>}
                     </div>
                   </div>
@@ -174,9 +174,9 @@ export default function ThermalReceipt({ date, data, metrics }) {
               <span className="font-black">{formatCurrency(metrics.kanal.onlineToplam)}</span>
             </div>
             <div className="flex justify-between">
-              <span>Toplam Paket / Kişi:</span>
+              <span>Paket / Salon Fiş / Kişi:</span>
               <span className="font-black">
-                {formatNumber(metrics.kanal.paketToplam)} / {formatNumber(metrics.kanal.kisiToplam)}
+                {formatNumber(metrics.kanal.paketToplam)} / {formatNumber(metrics.kanal.salonFisToplam)} / {formatNumber(metrics.kanal.kisiToplam)}
               </span>
             </div>
             <div className="flex justify-between">

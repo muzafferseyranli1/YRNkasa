@@ -300,7 +300,7 @@ export default function A4Report({ open, onClose, date, data, metrics }) {
     if (!open || !data || !metrics) return null;
     const kanal = metrics.kanal || {};
     const salonCiro = kanal.satirToplamlari?.restoran?.ciro || 0;
-    const salonFis = kanal.kisiToplam || 0;
+    const salonFis = kanal.salonFisToplam || 0;
     const paketCiro = (kanal.ciroToplam || 0) - salonCiro;
     const paketFis = kanal.paketToplam || 0;
     const kanalVar = (kanal.ciroToplam || 0) > 0;
@@ -316,7 +316,7 @@ export default function A4Report({ open, onClose, date, data, metrics }) {
     const pSalon = pk?.satirToplamlari?.restoran?.ciro || 0;
     const pPaketCiro = (pk?.ciroToplam || 0) - pSalon;
     const pTop = pk && pk.ciroToplam > 0 ? pk.ciroToplam : prev.metrics?.toplamSatis || 0;
-    const pFis = (pk?.kisiToplam || 0) + (pk?.paketToplam || 0);
+    const pFis = (pk?.salonFisToplam || 0) + (pk?.paketToplam || 0);
     const old = { toplam: pTop, salon: pSalon, paket: pPaketCiro, fis: pFis };
 
     // marka dağılımı

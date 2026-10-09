@@ -38,7 +38,7 @@ export default function SummaryCards({ metrics }) {
   } = metrics;
 
   const salonCiro = kanal?.satirToplamlari?.restoran?.ciro || 0;
-  const salonFis = kanal?.kisiToplam || 0;
+  const salonFis = kanal?.salonFisToplam || 0;
   const paketCiro = (kanal?.ciroToplam || 0) - salonCiro;
   const paketFis = kanal?.paketToplam || 0;
   const kirilim = [
