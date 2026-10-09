@@ -92,6 +92,50 @@ export const resolvePosMarka = (posMarka, markalar, dengePos, suitablePos) => {
   return first ? { [first]: { denge: { ...(dengePos || {}) }, suitable: { ...(suitablePos || {}) } } } : {};
 };
 
+const DAY_MS = 86400000;
+export const shiftDate = (dateStr, days) => {
+  const d = new Date(dateStr + 'T12:00:00');
+  return new Date(d.getTime() + days * DAY_MS).toLocaleDateString('sv-SE'); // YYYY-MM-DD
+};
+
+/**
+ * Özet kartları (A4 raporu ve 80mm fiş ortak kullanır): bu gün ve geçen haftanın aynı günü için
+ * toplam / salon / paket satış, fiş sayıları ve ortalamalar.
+ */
+export const buildSummary = (metrics, prevMetrics) => {
+  const kanal = metrics?.kanal || {};
+  const salonCiro = kanal.satirToplamlari?.restoran?.ciro || 0;
+  const salonFis = kanal.salonFisToplam || 0;
+  const paketFis = kanal.paketToplam || 0;
+  const kanalVar = (kanal.ciroToplam || 0) > 0;
+  const cur = {
+    toplam: kanalVar ? kanal.ciroToplam : metrics?.toplamSatis || 0,
+    salon: salonCiro,
+    paket: (kanal.ciroToplam || 0) - salonCiro,
+    salonFis,
+    paketFis,
+    fis: salonFis + paketFis,
+  };
+  const pk = prevMetrics?.kanal;
+  const pSalon = pk?.satirToplamlari?.restoran?.ciro || 0;
+  const old = {
+    toplam: pk && pk.ciroToplam > 0 ? pk.ciroToplam : prevMetrics?.toplamSatis || 0,
+    salon: pSalon,
+    paket: (pk?.ciroToplam || 0) - pSalon,
+    salonFis: pk?.salonFisToplam || 0,
+    paketFis: pk?.paketToplam || 0,
+  };
+  old.fis = old.salonFis + old.paketFis;
+  const avg = (c, f) => (f > 0 ? c / f : 0);
+  return {
+    cur,
+    old,
+    hasPrev: !!prevMetrics && old.toplam > 0,
+    ort: { toplam: avg(cur.toplam, cur.fis), salon: avg(cur.salon, cur.salonFis), paket: avg(cur.paket, cur.paketFis) },
+    ortPrev: { toplam: avg(old.toplam, old.fis), salon: avg(old.salon, old.salonFis), paket: avg(old.paket, old.paketFis) },
+  };
+};
+
 export const calculateKanalMetrics = (kanal) => {
   const markalar = kanal?.markalar || [];
   const satirlar = kanal?.satirlar || [];

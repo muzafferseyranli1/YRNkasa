@@ -19,6 +19,7 @@ import CourierReportsView from './components/reports/CourierReportsView';
 import TipReportsView from './components/reports/TipReportsView';
 import ArchiveReportsView from './components/reports/ArchiveReportsView';
 import { calculateReportMetrics, getDefaultReportData, normalizeReportData } from './utils/calculations';
+import usePrevWeek from './utils/usePrevWeek';
 import { apiFetch } from './utils/api';
 
 export default function App() {
@@ -91,6 +92,9 @@ export default function App() {
   useEffect(() => {
     loadReport(selectedDate);
   }, [selectedDate, loadReport]);
+
+  // Geçen haftanın aynı günü (özet kartları notu: A4 raporu ve 80mm fiş)
+  const prevWeek = usePrevWeek(selectedDate);
 
   // Realtime calculated metrics
   const metrics = useMemo(() => {
@@ -278,11 +282,11 @@ export default function App() {
 
       {/* 80mm Termal Adisyon Yazıcı Çıktısı (Yalnızca Print anında yazdırılır) */}
       {data && metrics && (
-        <ThermalReceipt date={selectedDate} data={data} metrics={metrics} />
+        <ThermalReceipt date={selectedDate} data={data} metrics={metrics} prev={prevWeek} />
       )}
 
       {/* A4 Gün Sonu Rapor Sayfası */}
-      <A4Report open={isA4Open} onClose={() => setIsA4Open(false)} date={selectedDate} data={data} metrics={metrics} />
+      <A4Report open={isA4Open} onClose={() => setIsA4Open(false)} date={selectedDate} data={data} metrics={metrics} prev={prevWeek} />
 
       {/* Geçmiş Raporlar Modalı */}
       <HistoryModal

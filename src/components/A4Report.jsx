@@ -1,15 +1,14 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X } from 'lucide-react';
 import {
   formatCurrency,
   formatNumber,
   num,
-  calculateReportMetrics,
-  normalizeReportData,
   resolvePosMarka,
+  buildSummary,
+  shiftDate,
 } from '../utils/calculations';
-import { apiFetch } from '../utils/api';
 
 /**
  * A4 tek sayfa gün sonu raporu. Sıra: özet kartları → devir / ekstra nakit → ödeme tipleri dökümü (marka kırılımlı)
@@ -30,11 +29,6 @@ const C = {
   amber: '#d97706',
 };
 
-const DAY = 86400000;
-const shiftDate = (dateStr, days) => {
-  const d = new Date(dateStr + 'T12:00:00');
-  return new Date(d.getTime() + days * DAY).toLocaleDateString('sv-SE'); // YYYY-MM-DD
-};
 const dayName = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('tr-TR', { weekday: 'long' });
 const longDate = (dateStr) =>
   new Date(dateStr + 'T12:00:00').toLocaleDateString('tr-TR', { day: '2-digit', month: 'long', year: 'numeric' });
@@ -149,32 +143,8 @@ const Op = ({ children }) => (
 
 // ---- Ana bileşen ----
 
-export default function A4Report({ open, onClose, date, data, metrics }) {
-  const [prev, setPrev] = useState({ loading: true, exists: false, metrics: null });
+export default function A4Report({ open, onClose, date, data, metrics, prev = { exists: false, metrics: null } }) {
   const prevDate = shiftDate(date, -7);
-
-  useEffect(() => {
-    if (!open) return undefined;
-    let alive = true;
-    setPrev({ loading: true, exists: false, metrics: null });
-    (async () => {
-      try {
-        const res = await apiFetch(`/api/reports/${prevDate}`);
-        const json = await res.json();
-        if (!alive || !json.success) return;
-        setPrev({
-          loading: false,
-          exists: !!json.exists,
-          metrics: json.exists ? calculateReportMetrics(normalizeReportData(json.report.data)) : null,
-        });
-      } catch {
-        if (alive) setPrev({ loading: false, exists: false, metrics: null });
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, [open, date, prevDate]);
 
   const handlePrint = () => {
     const style = document.createElement('style');
@@ -200,29 +170,7 @@ export default function A4Report({ open, onClose, date, data, metrics }) {
     const sp = data.suitablePos || {};
 
     // ---- Özet kartları (bu gün + geçen hafta aynı gün) ----
-    const kanalVar = (kanal.ciroToplam || 0) > 0;
-    const salonCiro = kanal.satirToplamlari?.restoran?.ciro || 0;
-    const salonFis = kanal.salonFisToplam || 0;
-    const paketCiro = (kanal.ciroToplam || 0) - salonCiro;
-    const paketFis = kanal.paketToplam || 0;
-    const cur = {
-      toplam: kanalVar ? kanal.ciroToplam : metrics.toplamSatis,
-      salon: salonCiro,
-      paket: paketCiro,
-      salonFis,
-      paketFis,
-      fis: salonFis + paketFis,
-    };
-    const pk = prev.metrics?.kanal;
-    const pSalon = pk?.satirToplamlari?.restoran?.ciro || 0;
-    const old = {
-      toplam: pk && pk.ciroToplam > 0 ? pk.ciroToplam : prev.metrics?.toplamSatis || 0,
-      salon: pSalon,
-      paket: (pk?.ciroToplam || 0) - pSalon,
-      salonFis: pk?.salonFisToplam || 0,
-      paketFis: pk?.paketToplam || 0,
-    };
-    old.fis = old.salonFis + old.paketFis;
+    const { cur, old } = buildSummary(metrics, prev.metrics);
 
     // ---- Ödeme tipleri dökümü (Denge + Suitable birleşik, marka kırılımlı) ----
     const pm = resolvePosMarka(data.posMarka, markalar, dp, sp);
@@ -289,13 +237,13 @@ export default function A4Report({ open, onClose, date, data, metrics }) {
     harcamalar, kurye, tips,
   } = view;
   const kanal = metrics.kanal || {};
-  const hasPrev = prev.exists && old.toplam > 0;
-  const ortFis = cur.fis > 0 ? cur.toplam / cur.fis : 0;
-  const ortFisPrev = old.fis > 0 ? old.toplam / old.fis : 0;
-  const ortSalon = cur.salonFis > 0 ? cur.salon / cur.salonFis : 0;
-  const ortSalonPrev = old.salonFis > 0 ? old.salon / old.salonFis : 0;
-  const ortPaket = cur.paketFis > 0 ? cur.paket / cur.paketFis : 0;
-  const ortPaketPrev = old.paketFis > 0 ? old.paket / old.paketFis : 0;
+  const { hasPrev, ort, ortPrev } = buildSummary(metrics, prev.metrics);
+  const ortFis = ort.toplam;
+  const ortFisPrev = ortPrev.toplam;
+  const ortSalon = ort.salon;
+  const ortSalonPrev = ortPrev.salon;
+  const ortPaket = ort.paket;
+  const ortPaketPrev = ortPrev.paket;
   const kasaFarki = metrics.kasaFarki || 0;
   const prevTag = hasPrev ? `geçen hf. ${shortDay(prevDate)}` : 'geçen hafta kaydı yok';
   const MAXROWS = 6;
@@ -374,7 +322,7 @@ export default function A4Report({ open, onClose, date, data, metrics }) {
         </div>
 
         {/* 4. Ödeme tipleri dökümü */}
-        <Section title="Ödeme Tipleri Dökümü" right="DengePOS + Suitable birleşik">
+        <Section title="Ödeme Tipleri Dökümü" right={`DengePOS ${tl(metrics.dengePosToplam)} · Suitable ${tl(metrics.suitablePosToplam)}`}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
             <thead>
               <tr>
@@ -557,7 +505,7 @@ export default function A4Report({ open, onClose, date, data, metrics }) {
             {harcamalar.length ? (
               <>
                 {maxCh(harcamalar).map((h) => (
-                  <Line key={h.id} label={`${h.title || 'Gider'}${h.isKK ? ' (KK)' : ''}`} value={tl(h.tutar)} color={h.isKK ? C.indigo : undefined} />
+                  <Line key={h.id} label={`${h.title || 'Gider'}${h.aciklama ? ` (${String(h.aciklama).slice(0, 22)})` : ''}${h.isKK ? ' (KK)' : ''}`} value={tl(h.tutar)} color={h.isKK ? C.indigo : undefined} />
                 ))}
                 {harcamalar.length > MAXROWS && <Line label={`+${harcamalar.length - MAXROWS} kalem daha`} value="" color={C.mute} />}
                 <Line label="Nakit çıkan" value={tl(metrics.nakitHarcamalar)} bold top />

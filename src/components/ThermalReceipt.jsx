@@ -1,39 +1,106 @@
 import React from 'react';
-import { formatCurrency, formatNumber, num } from '../utils/calculations';
+import { formatCurrency, formatNumber, num, resolvePosMarka, buildSummary, shiftDate } from '../utils/calculations';
 
-export default function ThermalReceipt({ date, data, metrics }) {
+/**
+ * 80mm gün sonu raporu. İçerik ve sıra A4 raporuyla aynıdır (yalnızca biçim farklı):
+ * özet → devir/extra → ödeme tipleri → kanallar → ara toplam → online nakit fişi → kredi kartı → yemek çeki
+ * → masraflar → kurye → bahşiş → ara toplam − çıkışlar = kasa sonucu / sayım → yarına devir, imza.
+ */
+
+const Sec = ({ title, children }) => (
+  <div className="py-2 border-b-2 border-black">
+    <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">--- {title} ---</div>
+    {children}
+  </div>
+);
+
+const Row = ({ l, v, bold, small, top, indent }) => (
+  <div
+    className={`flex justify-between gap-2 ${small ? 'text-[11px]' : ''} ${bold ? 'font-black' : ''} ${top ? 'border-t border-black mt-1 pt-0.5' : ''} ${indent ? 'pl-2' : ''}`}
+  >
+    <span>{l}</span>
+    <span className="text-right whitespace-nowrap">{v}</span>
+  </div>
+);
+
+const okv = (v) => Math.abs(num(v)) <= 0.05;
+const farkText = (d) => (okv(d) ? '✓ TAM' : formatCurrency(d));
+const delta = (cur, prev) => (prev > 0 ? ((cur - prev) / prev) * 100 : null);
+const dText = (d) => (d === null ? '' : ` ${d >= 0 ? '+' : '-'}%${Math.abs(d).toFixed(1).replace('.', ',')}`);
+
+export default function ThermalReceipt({ date, data, metrics, prev = { exists: false, metrics: null } }) {
   if (!data || !metrics) return null;
 
-  const {
-    kasaGiris = {},
-    dengePos = {},
-    suitablePos = {},
-    paneller = [],
-    zBilgileri = {},
-    harcamalar = [],
-    kanalCiro = null,
-  } = data;
+  const { kasaGiris = {}, dengePos = {}, suitablePos = {}, zBilgileri = {}, harcamalar = [], kanalCiro = null } = data;
+  const markalar = kanalCiro?.markalar || [];
+  const kanal = metrics.kanal || {};
 
   const formatDateDisplay = (dateStr) => {
     try {
       const d = new Date(dateStr + 'T00:00:00');
-      return d.toLocaleDateString('tr-TR', {
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        weekday: 'short',
-      });
+      return d.toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'short' });
     } catch {
       return dateStr;
     }
   };
+  const shortDay = (dateStr) =>
+    new Date(dateStr + 'T12:00:00').toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
 
   const nakitGiderToplam = metrics.nakitHarcamalar ?? metrics.toplamHarcamalar;
   const kkGiderToplam = metrics.kkHarcamalar ?? 0;
+  const kasaFarki = metrics.kasaFarki || 0;
+
+  // ---- Özet (A4 ile ortak hesap) ----
+  const { cur, old, hasPrev, ort, ortPrev } = buildSummary(metrics, prev.metrics);
+  const prevDate = shiftDate(date, -7);
+
+  // ---- Ödeme tipleri (Denge + Suitable birleşik, marka kırılımlı) ----
+  const pm = resolvePosMarka(data.posMarka, markalar, dengePos, suitablePos);
+  const tipler = [
+    ['Nakit', 'nakit', true],
+    ['Kredi Kartı', 'krediKarti', true],
+    ['Online Kredi Kartı', 'onlineKrediKarti', false],
+    ['Cari', 'cari', false],
+    ['Sodexho', 'sodexho', false],
+    ['Multinet', 'multinet', false],
+    ['Ticket', 'ticket', false],
+    ['Setcard', 'setcard', false],
+  ];
+  const brandVal = (mk, key) => num(pm[mk.id]?.denge?.[key]) + num(pm[mk.id]?.suitable?.[key]);
+  const odemeRows = tipler
+    .map(([label, key, always]) => {
+      const brands = markalar.map((mk) => ({ name: mk.name, v: brandVal(mk, key) }));
+      return { label, key, brands, total: brands.reduce((t, b) => t + b.v, 0), always };
+    })
+    .filter((r) => r.always || r.total !== 0);
+  const odemeToplam = odemeRows.reduce((t, r) => t + r.total, 0);
+
+  // ---- Nakit akışı ----
+  const nakitSatis = num(dengePos.nakit) + num(suitablePos.nakit);
+  const onlineKK = num(dengePos.onlineKrediKarti) + num(suitablePos.onlineKrediKarti);
+  const satisKK = num(dengePos.krediKarti) + num(suitablePos.krediKarti);
+
+  const kurye = (data.kuryeOdemeleri || [])
+    .map((k) => {
+      const count = num(k.siparisSayisi);
+      const unit = k.birimFiyat !== undefined && k.birimFiyat !== '' ? num(k.birimFiyat) : 20;
+      const total = k.toplamTutar !== undefined && k.toplamTutar !== '' ? num(k.toplamTutar) : count * unit;
+      return { name: k.kuryeAdi || 'Kurye', count, unit, total };
+    })
+    .filter((k) => k.count > 0 || k.total > 0);
+
+  const tips = (data.tipOdemeleri || [])
+    .map((t) => {
+      const cardTip = num(t.cekilenTip);
+      const rate = t.kesintiOrani !== undefined && t.kesintiOrani !== '' ? num(t.kesintiOrani) : 20;
+      const net = t.netNakitTip !== undefined && t.netNakitTip !== '' ? num(t.netNakitTip) : cardTip - cardTip * (rate / 100);
+      return { name: t.personelAdi || 'Personel', cardTip, rate, net };
+    })
+    .filter((t) => t.cardTip > 0);
 
   return (
     <div className="thermal-receipt-container text-black bg-white select-none">
-      {/* 1. BAŞLIK */}
+      {/* BAŞLIK */}
       <div className="text-center pb-2 border-b-2 border-black">
         <h1 className="text-2xl font-black tracking-wide uppercase leading-tight">YRN RESTORAN</h1>
         <h2 className="text-base font-black uppercase mt-0.5 tracking-wide">GÜN SONU KASA RAPORU</h2>
@@ -44,251 +111,180 @@ export default function ThermalReceipt({ date, data, metrics }) {
         </div>
       </div>
 
-      {/* 2. KASA NAKİT VE DEVİR DURUMU */}
-      <div className="py-2 border-b-2 border-black">
-        <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-          --- KASA NAKİT AKIŞI ---
-        </div>
-        
+      {/* 1. ÖZET (geçen hafta aynı güne göre %) */}
+      <Sec title="ÖZET">
         <div className="space-y-1 text-sm font-bold">
-          <div className="flex justify-between">
-            <span>Önceki Günden Devir:</span>
-            <span className="font-black text-base">{formatCurrency(kasaGiris.devir)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Kasaya Konan Nakit:</span>
-            <span>{formatCurrency(kasaGiris.kasayaParaKondu)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>DengePOS Nakit Satış:</span>
-            <span>{formatCurrency(dengePos.nakit)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Suitable POS Nakit Satış:</span>
-            <span>{formatCurrency(suitablePos.nakit)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Kasa Nakit Çıkışı (Gider):</span>
-            <span>-{formatCurrency(nakitGiderToplam)}</span>
-          </div>
+          <Row l="TOPLAM SATIŞ:" v={`${formatCurrency(cur.toplam)}${hasPrev ? dText(delta(cur.toplam, old.toplam)) : ''}`} bold />
+          <Row l="Salon:" v={`${formatCurrency(cur.salon)}${hasPrev ? dText(delta(cur.salon, old.salon)) : ''}`} />
+          <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={formatCurrency(ort.salon)} small indent />
+          <Row l="Paket:" v={`${formatCurrency(cur.paket)}${hasPrev ? dText(delta(cur.paket, old.paket)) : ''}`} />
+          <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={formatCurrency(ort.paket)} small indent />
+          <Row l="Fiş Sayısı:" v={`${formatNumber(cur.fis)}${hasPrev ? dText(delta(cur.fis, old.fis)) : ''}`} />
+          <Row l="Ortalama Fiş:" v={`${formatCurrency(ort.toplam)}${hasPrev ? dText(delta(ort.toplam, ortPrev.toplam)) : ''}`} />
         </div>
-
-        <div className="border-t-2 border-black my-1.5"></div>
-
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm font-black">
-            <span>HESAPLANAN KASA:</span>
-            <span className="text-base font-black">{formatCurrency(metrics.hesaplananNakit)}</span>
-          </div>
-          <div className="flex justify-between text-sm font-black">
-            <span>FİZİKİ KASA SAYIMI:</span>
-            <span className="text-base font-black">{formatCurrency(metrics.fizikiSayim)}</span>
-          </div>
-          <div className="flex justify-between text-sm font-black pt-1 border-t border-black">
-            <span>KASA FARKI:</span>
-            <span className="text-base font-black">
-              {metrics.kasaFarki === 0
-                ? '0,00 ₺ (TAM)'
-                : metrics.kasaFarki < 0
-                ? `${formatCurrency(Math.abs(metrics.kasaFarki))} (EKSİK)`
-                : `${formatCurrency(metrics.kasaFarki)} (FAZLA)`}
-            </span>
-          </div>
+        <div className="mt-1 text-[11px] font-bold">
+          {hasPrev
+            ? `Kıyas: geçen hf. ${shortDay(prevDate)} → satış ${formatCurrency(old.toplam)} · ${formatNumber(old.fis)} fiş`
+            : 'Geçen hafta aynı gün kaydı yok'}
         </div>
-      </div>
+      </Sec>
 
-      {/* 3. SATIŞ VE CİRO ÖZETİ */}
-      <div className="py-2 border-b-2 border-black">
-        <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-          --- SATIŞ VE CİRO ÖZETİ ---
-        </div>
+      {/* 2. DEVİR + EXTRA NAKİT */}
+      <Sec title="KASA GİRİŞİ">
         <div className="space-y-1 text-sm font-bold">
-          <div className="flex justify-between">
-            <span>DengePOS Satış:</span>
-            <span>{formatCurrency(metrics.dengePosToplam)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Suitable POS Satış:</span>
-            <span>{formatCurrency(metrics.suitablePosToplam)}</span>
-          </div>
+          <Row l="Önceki Günden Devir:" v={formatCurrency(kasaGiris.devir)} bold />
+          <Row l="Extra Eklenen Nakit:" v={formatCurrency(kasaGiris.kasayaParaKondu)} />
+        </div>
+      </Sec>
+
+      {/* 3. ÖDEME TİPLERİ DÖKÜMÜ */}
+      <Sec title="ÖDEME TİPLERİ">
+        <div className="space-y-1 text-sm font-bold">
+          {odemeRows.map((r) => (
+            <div key={r.key}>
+              <Row l={`${r.label}:`} v={formatCurrency(r.total)} />
+              {r.brands.filter((b) => b.v !== 0).length > 1 && (
+                <div className="pl-2 text-[11px] font-semibold">
+                  {r.brands.filter((b) => b.v !== 0).map((b) => `${b.name} ${formatCurrency(b.v)}`).join(' · ')}
+                </div>
+              )}
+            </div>
+          ))}
         </div>
         <div className="border-t-2 border-black my-1.5"></div>
-        <div className="flex justify-between text-base font-black">
-          <span>TOPLAM SATIŞ (CİRO):</span>
-          <span className="text-lg font-black">{formatCurrency(metrics.toplamSatis)}</span>
+        <Row l="TOPLAM:" v={formatCurrency(odemeToplam)} bold />
+        <div className="text-[11px] font-bold mt-0.5">
+          DengePOS {formatCurrency(metrics.dengePosToplam)} · Suitable {formatCurrency(metrics.suitablePosToplam)}
         </div>
-      </div>
+      </Sec>
 
-      {/* 3b. MARKA / KANAL KIRILIMLI CİRO */}
+      {/* 4. SATIŞ KANALLARI DÖKÜMÜ */}
       {metrics.kanalGirildi && kanalCiro && (
-        <div className="py-2 border-b-2 border-black">
-          <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-            --- MARKA / KANAL CİRO ---
-          </div>
-
-          {/* Marka toplamları */}
+        <Sec title="SATIŞ KANALLARI">
           <div className="space-y-1 text-sm font-bold">
-            {(kanalCiro.markalar || []).map((mk) => (
-              <div key={mk.id} className="flex justify-between">
-                <span>{mk.name}:</span>
-                <span className="font-black">
-                  {formatCurrency(metrics.kanal.markaCiro[mk.id])} · {formatNumber(metrics.kanal.markaPaket[mk.id])} pkt
-                </span>
-              </div>
+            {markalar.map((mk) => (
+              <Row
+                key={mk.id}
+                l={`${mk.name}:`}
+                v={`${formatCurrency(kanal.markaCiro?.[mk.id])} · ${formatNumber((kanal.markaPaket?.[mk.id] || 0) + (kanal.markaSalonFis?.[mk.id] || 0))} adet`}
+                bold
+              />
             ))}
           </div>
-
-          {/* Kanal satırları (yalnızca girilmiş olanlar) */}
           <div className="border-t border-black my-1.5"></div>
           <div className="space-y-1 text-xs font-bold">
             {(kanalCiro.satirlar || [])
               .filter((r) => {
-                const t = metrics.kanal.satirToplamlari[r.id] || {};
-                return (t.ciro || 0) !== 0 || (t.online || 0) !== 0 || (t.adet || 0) !== 0;
+                const t = kanal.satirToplamlari?.[r.id] || {};
+                return (t.ciro || 0) !== 0 || (t.online || 0) !== 0 || (t.adet || 0) !== 0 || (t.kisi || 0) !== 0;
               })
               .map((r) => {
-                const t = metrics.kanal.satirToplamlari[r.id] || {};
+                const t = kanal.satirToplamlari?.[r.id] || {};
                 return (
                   <div key={r.id}>
-                    <div className="flex justify-between">
-                      <span>{r.name}:</span>
-                      <span className="font-black">{formatCurrency(t.ciro)}</span>
-                    </div>
+                    <Row l={`${r.name}:`} v={formatCurrency(t.ciro)} bold />
                     <div className="flex justify-between pl-2 text-[11px]">
-                      <span>{r.sayiTuru === 'kisi' ? `${formatNumber(t.adet)} fiş${(t.kisi || 0) > 0 ? ` · ${formatNumber(t.kisi)} kişi` : ''}` : `${formatNumber(t.adet)} paket`}</span>
+                      <span>
+                        {r.sayiTuru === 'kisi'
+                          ? `${formatNumber(t.adet)} fiş${(t.kisi || 0) > 0 ? ` · ${formatNumber(t.kisi)} kişi` : ''}`
+                          : `${formatNumber(t.adet)} paket`}
+                      </span>
                       {(t.online || 0) !== 0 && <span>Online alacak: {formatCurrency(t.online)}</span>}
                     </div>
                   </div>
                 );
               })}
           </div>
-
           <div className="border-t-2 border-black my-1.5"></div>
           <div className="space-y-1 text-sm font-bold">
-            <div className="flex justify-between text-base font-black">
-              <span>CİRO TOPLAM:</span>
-              <span>{formatCurrency(metrics.kanal.ciroToplam)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Online Alacak Toplam:</span>
-              <span className="font-black">{formatCurrency(metrics.kanal.onlineToplam)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Paket / Salon Fiş / Kişi:</span>
-              <span className="font-black">
-                {formatNumber(metrics.kanal.paketToplam)} / {formatNumber(metrics.kanal.salonFisToplam)} / {formatNumber(metrics.kanal.kisiToplam)}
-              </span>
-            </div>
-            <div className="flex justify-between">
-              <span>Kanal Ciro − POS Farkı:</span>
-              <span className="font-black">{formatCurrency(metrics.kanalCiroFarki)}</span>
-            </div>
-            {metrics.onlineKontrolVar && (
-              <div className="flex justify-between">
-                <span>Online Alacak − Suitable Online:</span>
-                <span className="font-black">{formatCurrency(metrics.kanalOnlineFarki)}</span>
-              </div>
-            )}
+            <Row l="CİRO TOPLAM:" v={formatCurrency(kanal.ciroToplam)} bold />
+            <Row l="Online Alacak Toplam:" v={formatCurrency(kanal.onlineToplam)} />
+            <Row
+              l="Paket / Salon Fiş / Kişi:"
+              v={`${formatNumber(kanal.paketToplam)} / ${formatNumber(kanal.salonFisToplam)} / ${formatNumber(kanal.kisiToplam)}`}
+            />
+            <Row l="Kanal Ciro − POS Farkı:" v={farkText(metrics.kanalCiroFarki)} bold />
+            {metrics.onlineKontrolVar && <Row l="Online Alacak − POS Online KK:" v={farkText(metrics.kanalOnlineFarki)} bold />}
           </div>
-        </div>
+        </Sec>
       )}
 
-      {/* 4. Z RAPORU & FİŞ MUTABAKATI */}
-      <div className="py-2 border-b-2 border-black">
-        <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-          --- MALİ FİŞ & Z MUTABAKAT ---
-        </div>
+      {/* 5. ARA TOPLAM (devir + extra + satıştan gelen nakit) */}
+      <Sec title="ARA TOPLAM">
         <div className="space-y-1 text-sm font-bold">
-          <div className="flex justify-between">
-            <span>Gereken Nakit Fişi:</span>
-            <span>{formatCurrency(metrics.kesilmesiGerekenNakitFisi)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Kesilen Z Nakit Fişi:</span>
-            <span className="font-black">{formatCurrency(metrics.kesilenNakitFisi)}</span>
-          </div>
-          <div className="flex justify-between font-black pt-0.5">
-            <span>Nakit Fiş Farkı:</span>
-            <span>{formatCurrency(metrics.nakitFisFarki)}</span>
-          </div>
+          <Row l="Devir:" v={formatCurrency(kasaGiris.devir)} />
+          <Row l="+ Extra konan nakit:" v={formatCurrency(kasaGiris.kasayaParaKondu)} />
+          <Row l="+ Satıştan gelen nakit:" v={formatCurrency(nakitSatis)} />
+        </div>
+        <div className="border-t-2 border-black my-1.5"></div>
+        <Row l="ARA TOPLAM:" v={formatCurrency(metrics.toplamNakitGiris)} bold />
+      </Sec>
 
-          <div className="border-t border-black my-1.5"></div>
+      {/* 6. ONLİNE SATIŞ · KESİLEN NAKİT FİŞİ */}
+      <Sec title="ONLİNE · NAKİT FİŞİ">
+        <div className="space-y-1 text-sm font-bold">
+          <Row l="Nakit satış:" v={formatCurrency(nakitSatis)} />
+          <Row l="+ Online kredi kartı satış:" v={formatCurrency(onlineKK)} />
+          <Row l="= Kesilmesi gereken:" v={formatCurrency(metrics.kesilmesiGerekenNakitFisi)} bold top />
+          <Row l="Kesilen Z nakit fişi:" v={formatCurrency(metrics.kesilenNakitFisi)} bold />
+          <Row
+            l="Fark:"
+            v={okv(metrics.nakitFisFarki) ? '✓ TAM' : `${formatCurrency(metrics.nakitFisFarki)} ${metrics.nakitFisFarki < 0 ? '(EKSİK FİŞ)' : '(FAZLA FİŞ)'}`}
+            bold
+            top
+          />
+        </div>
+      </Sec>
 
-          <div className="flex justify-between">
-            <span>Hesaplanan Kredi Kartı:</span>
-            <span>{formatCurrency(metrics.hesaplananKrediKarti)}</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Fiziki POS Kredi Kartı Z:</span>
-            <span className="font-black">{formatCurrency(metrics.fizikiKrediKarti)}</span>
-          </div>
-          <div className="flex justify-between font-black pt-0.5">
-            <span>Kredi Kartı Farkı:</span>
-            <span>{formatCurrency(metrics.krediKartiFarki)}</span>
-          </div>
+      {/* 7. KREDİ KARTI: sistem / Z / banka gün sonu */}
+      <Sec title="KREDİ KARTI">
+        <div className="space-y-1 text-sm font-bold">
+          <Row l="Sistem satış kredi kartı:" v={formatCurrency(satisKK)} />
+          <Row l="+ Kartla çekilen bahşiş:" v={formatCurrency(metrics.tipCekilenKartToplami)} />
+          <Row l="= Sistem kredi kartı:" v={formatCurrency(metrics.hesaplananKrediKarti)} bold top />
+          <Row l="Z raporları (POS):" v={formatCurrency(metrics.fizikiKrediKarti)} bold />
+          <Row l="Fark (Z − sistem):" v={farkText(metrics.krediKartiFarki)} bold top />
 
-          {metrics.bankaGirildi && (
+          {metrics.bankaGirildi ? (
             <>
               <div className="border-t border-black my-1.5"></div>
               <div className="font-black text-xs uppercase">Banka Gün Sonu</div>
               {(metrics.bankaDetay || []).map((b) => (
                 <div key={b.id}>
-                  <div className="flex justify-between">
-                    <span>{b.name}:</span>
-                    <span className="font-black">{formatCurrency(b.tutar)}</span>
-                  </div>
+                  <Row l={`${b.name}:`} v={formatCurrency(b.tutar)} />
                   {/* Cihazın Banka 1/2/3 kırılımı (yalnızca girilenler) */}
                   {((zBilgileri.posCihazlari || []).find((d) => d.id === b.id)?.banka || []).map((v, slot) =>
-                    num(v) !== 0 ? (
-                      <div key={slot} className="flex justify-between pl-2 text-[11px]">
-                        <span>Banka {slot + 1}:</span>
-                        <span>{formatCurrency(v)}</span>
-                      </div>
-                    ) : null
+                    num(v) !== 0 ? <Row key={slot} l={`Banka ${slot + 1}:`} v={formatCurrency(v)} small indent /> : null
                   )}
-                  {b.cihazSayisi > 0 && (
-                    <div className="flex justify-between pl-2 text-[11px]">
-                      <span>Z: {formatCurrency(b.zToplam)}</span>
-                      <span>Fark: {formatCurrency(b.fark)}</span>
-                    </div>
-                  )}
+                  {b.cihazSayisi > 0 && <Row l={`Z: ${formatCurrency(b.zToplam)}`} v={`Fark: ${farkText(b.fark)}`} small indent />}
                 </div>
               ))}
-              <div className="flex justify-between font-black pt-0.5">
-                <span>Banka − Z Farkı:</span>
-                <span>{formatCurrency(metrics.bankaFarki)}</span>
-              </div>
+              <Row l={`Banka toplamı ${formatCurrency(metrics.bankaToplam)} − Z:`} v={farkText(metrics.bankaFarki)} bold top />
             </>
+          ) : (
+            <div className="text-xs font-semibold">Banka gün sonu girilmedi</div>
           )}
         </div>
-      </div>
+      </Sec>
 
-      {/* 5. YEMEK KARTLARI */}
-      <div className="py-2 border-b-2 border-black">
-        <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-          --- YEMEK KARTI GÜN SONU (GÜN SONU / SİSTEM) ---
-        </div>
+      {/* 8. YEMEK ÇEKİ: sistem / Z (gün sonu) */}
+      <Sec title="YEMEK ÇEKİ">
         <div className="space-y-1 text-sm font-bold">
           {Object.entries(metrics.yemekKartlari || {}).map(([key, item]) => {
             const name = key.charAt(0).toUpperCase() + key.slice(1);
             return (
-              <div key={key} className="flex justify-between">
-                <span>{name}:</span>
-                <span className="font-black">
-                  {formatCurrency(item.fiziki)} / {formatCurrency(item.hesaplanan)}
-                </span>
+              <div key={key}>
+                <Row l={`${name}:`} v={`Sistem ${formatCurrency(item.hesaplanan)}`} />
+                <Row l={`Z/gün sonu ${formatCurrency(item.fiziki)}`} v={`Fark: ${farkText(item.fark)}`} small indent />
               </div>
             );
           })}
         </div>
-      </div>
+      </Sec>
 
-      {/* 6. HARCAMA DETAYLARI */}
+      {/* 9. MASRAFLAR */}
       {harcamalar && harcamalar.length > 0 && (
-        <div className="py-2 border-b-2 border-black">
-          <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-            --- KASA GİDER DETAYLARI ---
-          </div>
+        <Sec title="MASRAFLAR">
           <div className="space-y-1 text-sm font-bold">
             {harcamalar.map((h, i) => (
               <div key={i} className="flex justify-between items-center">
@@ -303,91 +299,82 @@ export default function ThermalReceipt({ date, data, metrics }) {
               </div>
             ))}
           </div>
-
           <div className="border-t-2 border-black my-1.5"></div>
-
           <div className="space-y-0.5 text-xs font-bold">
-            <div className="flex justify-between">
-              <span>Kasadan Çıkan Nakit Gider:</span>
-              <span className="font-black">{formatCurrency(nakitGiderToplam)}</span>
-            </div>
-            {kkGiderToplam > 0 && (
-              <div className="flex justify-between text-black">
-                <span>Kredi Kartı ile Yapılan [KK]:</span>
-                <span className="font-black">{formatCurrency(kkGiderToplam)} (Harici)</span>
-              </div>
-            )}
-            <div className="flex justify-between text-sm font-black pt-1 border-t border-black">
-              <span>TOPLAM GİDER (Nakit+KK):</span>
-              <span className="text-base font-black">{formatCurrency(metrics.toplamHarcamalar)}</span>
-            </div>
+            <Row l="Kasadan Çıkan Nakit Gider:" v={formatCurrency(nakitGiderToplam)} bold />
+            {kkGiderToplam > 0 && <Row l="Kredi Kartı ile Yapılan [KK]:" v={`${formatCurrency(kkGiderToplam)} (Harici)`} />}
+            <Row l="TOPLAM GİDER (Nakit+KK):" v={formatCurrency(metrics.toplamHarcamalar)} bold top />
           </div>
-        </div>
+        </Sec>
       )}
 
-      {/* 6.1. KURYE ADİSYON / PAKET ÖDEMELERİ */}
-      {data.kuryeOdemeleri && data.kuryeOdemeleri.length > 0 && metrics.kuryeOdemeleriToplami > 0 && (
-        <div className="py-2 border-b-2 border-black">
-          <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-            --- KURYE PAKET ÖDEMELERİ ---
-          </div>
+      {/* 10. ADİSYON KURYE ÖDEMELERİ */}
+      {kurye.length > 0 && (
+        <Sec title="KURYE ÖDEMELERİ">
           <div className="space-y-1 text-sm font-bold">
-            {data.kuryeOdemeleri.filter(k => num(k.siparisSayisi) > 0 || num(k.toplamTutar) > 0).map((k, i) => {
-              const count = num(k.siparisSayisi);
-              const unit = k.birimFiyat !== undefined ? num(k.birimFiyat) : 20;
-              const total = k.toplamTutar !== undefined && k.toplamTutar !== '' ? num(k.toplamTutar) : (count * unit);
-              return (
-                <div key={i} className="flex justify-between items-center">
-                  <span>{k.kuryeAdi || 'Kurye'} ({count}x{unit}₺):</span>
-                  <span className="font-black">{formatCurrency(total)}</span>
-                </div>
-              );
-            })}
+            {kurye.map((k, i) => (
+              <Row key={i} l={`${k.name} (${k.count}x${k.unit}₺):`} v={formatCurrency(k.total)} />
+            ))}
           </div>
-          <div className="border-t border-black mt-1.5 pt-1 flex justify-between text-sm font-black">
-            <span>Toplam Kurye Nakit Çıkışı:</span>
-            <span className="font-black">{formatCurrency(metrics.kuryeOdemeleriToplami)}</span>
+          <div className="border-t border-black mt-1.5 pt-1 space-y-0.5 text-sm font-black">
+            <Row l="Toplam Sipariş:" v={formatNumber(metrics.kuryeToplamSiparisSayisi)} />
+            <Row l="Toplam Kurye Nakit Çıkışı:" v={formatCurrency(metrics.kuryeOdemeleriToplami)} />
           </div>
-        </div>
+        </Sec>
       )}
 
-      {/* 6.2. KREDİ KARTI BAHŞİŞ & NAKİT TİP ÖDEMELERİ */}
-      {data.tipOdemeleri && data.tipOdemeleri.length > 0 && (metrics.tipCekilenKartToplami > 0 || metrics.tipNetNakitToplami > 0) && (
-        <div className="py-2 border-b-2 border-black">
-          <div className="font-black text-sm uppercase text-center pb-0.5 mb-1.5 border-b border-black">
-            --- BAHŞİŞ (TİP) ÖDEMELERİ ---
-          </div>
+      {/* 11. BAHŞİŞ (TİP) ÖDEMELERİ */}
+      {tips.length > 0 && (
+        <Sec title="BAHŞİŞ (TİP) ÖDEMELERİ">
           <div className="space-y-1 text-sm font-bold">
-            {data.tipOdemeleri.filter(t => num(t.cekilenTip) > 0).map((t, i) => {
-              const cardTip = num(t.cekilenTip);
-              const rate = t.kesintiOrani !== undefined ? num(t.kesintiOrani) : 20;
-              const netCash = t.netNakitTip !== undefined && t.netNakitTip !== '' ? num(t.netNakitTip) : (cardTip - (cardTip * (rate / 100)));
-              return (
-                <div key={i} className="flex justify-between items-center">
-                  <span>{t.personelAdi || 'Personel'} (Kart:{cardTip}₺ -%{rate}):</span>
-                  <span className="font-black">Net {formatCurrency(netCash)}</span>
-                </div>
-              );
-            })}
+            {tips.map((t, i) => (
+              <Row key={i} l={`${t.name} (Kart:${t.cardTip}₺ -%${t.rate}):`} v={`Net ${formatCurrency(t.net)}`} />
+            ))}
           </div>
           <div className="border-t border-black mt-1.5 pt-1 space-y-0.5 text-xs font-bold">
-            <div className="flex justify-between">
-              <span>Karttan Çekilen Tip:</span>
-              <span>{formatCurrency(metrics.tipCekilenKartToplami)}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>İşletme Komisyonu (%20):</span>
-              <span>{formatCurrency(metrics.tipKesintiToplami)}</span>
-            </div>
-            <div className="flex justify-between text-sm font-black pt-0.5 border-t border-black">
-              <span>Kasadan Ödenen Net Nakit:</span>
-              <span className="font-black">{formatCurrency(metrics.tipNetNakitToplami)}</span>
-            </div>
+            <Row l="Karttan Çekilen Tip:" v={formatCurrency(metrics.tipCekilenKartToplami)} />
+            <Row l="İşletme Komisyonu:" v={formatCurrency(metrics.tipKesintiToplami)} />
+            <Row l="Kasadan Ödenen Net Nakit:" v={formatCurrency(metrics.tipNetNakitToplami)} bold top />
           </div>
-        </div>
+        </Sec>
       )}
 
-      {/* 7. İMZA ALANI */}
+      {/* 12. ARA TOPLAM − ÇIKIŞLAR = KASA SONUCU · SAYIM */}
+      <Sec title="KASA SONUCU">
+        <div className="space-y-1 text-sm font-bold">
+          <Row l="Ara Toplam:" v={formatCurrency(metrics.toplamNakitGiris)} />
+          <Row l="− Nakit Gider:" v={formatCurrency(nakitGiderToplam)} small indent />
+          <Row l="− Kurye Ödemeleri:" v={formatCurrency(metrics.kuryeOdemeleriToplami)} small indent />
+          <Row l="− Net Bahşiş:" v={formatCurrency(metrics.tipNetNakitToplami)} small indent />
+          <Row l="Toplam Çıkışlar:" v={`-${formatCurrency(metrics.toplamNakitCikis)}`} bold top />
+        </div>
+        <div className="space-y-1 mt-1.5">
+          <div className="flex justify-between text-sm font-black">
+            <span>KASA SONUCU:</span>
+            <span className="text-base font-black">{formatCurrency(metrics.hesaplananNakit)}</span>
+          </div>
+          <div className="flex justify-between text-sm font-black">
+            <span>SAYIM (FİZİKİ):</span>
+            <span className="text-base font-black">{formatCurrency(metrics.fizikiSayim)}</span>
+          </div>
+          <div className="flex justify-between text-sm font-black pt-1 border-t border-black">
+            <span>KASA FARKI:</span>
+            <span className="text-base font-black">
+              {okv(kasaFarki)
+                ? '0,00 ₺ (TAM)'
+                : kasaFarki < 0
+                ? `${formatCurrency(Math.abs(kasaFarki))} (EKSİK)`
+                : `${formatCurrency(kasaFarki)} (FAZLA)`}
+            </span>
+          </div>
+        </div>
+        <div className="border-t border-black mt-1.5 pt-1 text-sm font-black">
+          <Row l="YARINA DEVİR:" v={formatCurrency(metrics.fizikiSayim)} />
+        </div>
+        {data.notlar && <div className="mt-1 text-[11px] font-bold">Not: {String(data.notlar).slice(0, 160)}</div>}
+      </Sec>
+
+      {/* İMZA ALANI */}
       <div className="pt-2 pb-1 text-center text-sm font-bold">
         <div className="flex justify-between mt-1">
           <div className="w-1/2 text-center">
