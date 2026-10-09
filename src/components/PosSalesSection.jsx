@@ -1,6 +1,6 @@
 import React from 'react';
 import { Store } from 'lucide-react';
-import { formatCurrency, num } from '../utils/calculations';
+import { formatCurrency, num, resolvePosMarka } from '../utils/calculations';
 import NumberInput from './NumberInput';
 
 // Satırlar: key, etiket, hangi POS'ta var (d: DengePOS, s: Suitable)
@@ -21,13 +21,6 @@ const cellCls =
   'w-full bg-slate-50 border border-slate-200 rounded-md px-1.5 py-1 text-xs font-semibold text-slate-800 text-right outline-none';
 
 const sumKeys = (obj, keys) => keys.reduce((t, k) => t + num(obj?.[k]), 0);
-
-// Marka kırılımı yoksa (eski kayıt) mevcut toplamları ilk markaya taşır
-const resolvePosMarka = (posMarka, markalar, dengePos, suitablePos) => {
-  if (posMarka) return posMarka;
-  const first = markalar[0]?.id;
-  return first ? { [first]: { denge: { ...(dengePos || {}) }, suitable: { ...(suitablePos || {}) } } } : {};
-};
 
 export default function PosSalesSection({
   markalar = [],

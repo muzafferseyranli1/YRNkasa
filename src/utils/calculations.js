@@ -85,6 +85,13 @@ export const normalizeReportData = (data) => {
   };
 };
 
+// Marka kırılımı (posMarka) yoksa (eski kayıt) mevcut Denge/Suitable toplamlarını ilk markaya taşır
+export const resolvePosMarka = (posMarka, markalar, dengePos, suitablePos) => {
+  if (posMarka) return posMarka;
+  const first = markalar?.[0]?.id;
+  return first ? { [first]: { denge: { ...(dengePos || {}) }, suitable: { ...(suitablePos || {}) } } } : {};
+};
+
 export const calculateKanalMetrics = (kanal) => {
   const markalar = kanal?.markalar || [];
   const satirlar = kanal?.satirlar || [];

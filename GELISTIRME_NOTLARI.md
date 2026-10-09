@@ -38,11 +38,12 @@ npm run dev:all   # arayüz :5173, API :3000   (ya da: npm run build && npm star
 - Silindi: `ScanReceiptModal.jsx`, `src/utils/ocrParser.js`, `imagePreprocess.js`, `scripts/testOcr.js`, `tesseract.js` bağımlılığı. POS, Harcamalar ve Z raporu bölümlerindeki "Fiş Tara" butonları gitti.
 - Bilerek kalan: Harcamalardaki "Fiş Ekle" (fotoğraf yükleme, `/api/upload`). Mobil (Capacitor) daha önce kaldırılmıştı.
 
-### 6. A4 tek sayfa gün sonu raporu (YENİ)
-- `src/components/A4Report.jsx` + Header'da "A4 Rapor" butonu. Önizleme penceresinde "Yazdır / PDF".
-- İçerik: KPI'lar, geçen haftanın aynı günüyle karşılaştırma (`/api/reports/:date-7`), son 14 gün seyri (`/api/reports` listesi), marka pastası, kanal dağılımı, ödeme tipi pastası, masraflar, kasa akışı ve mutabakat kutuları. Grafikler saf SVG.
-- Yazdırma: `body.printing-a4` sınıfı + `@media print` kuralları `src/index.css` içinde; `@page A4` yazdırma anında enjekte edilir. Adisyon (80mm) çıktısının siyah-beyaz zorlaması artık sadece `.thermal-receipt-container` içinde.
-- Henüz gerçek yazıcı/PDF çıktısı denenmedi; yazdırma önizlemesinde "Arka plan grafikleri" açık olmalı. Çok fazla gider kalemi girilirse sayfa dolabilir (altta ~80px pay var).
+### 6. A4 tek sayfa gün sonu raporu (YENİDEN DÜZENLENDİ, 2026-10-09)
+- `src/components/A4Report.jsx` + Header'da "A4 Rapor" butonu. Önizleme penceresinde "Yazdır / PDF". Grafik yok, tablo/kutu düzeni.
+- Sıra: özet kartları (Toplam / Salon / Paket / Fiş / Ortalama, her birinde geçen hafta aynı güne göre % notu) → devir + extra nakit → Ödeme Tipleri Dökümü (Denge+Suitable birleşik, marka kırılımlı, `resolvePosMarka`) → Satış Kanalları Dökümü (ciro/online/adet, Salon kişi bilgi) → Ara Toplam (devir + extra + satıştan gelen nakit) → Online satış için kesilen nakit fişi → Kredi kartı (dağılım / Z / banka gün sonu) → Yemek çeki (dağılım / Z-gün sonu) → Masraflar | Kurye | Bahşiş → Ara toplam − çıkışlar = Kasa sonucu / Sayım / Fark → alt bilgi (yarına devir, not, imza).
+- Kaldırılanlar: haftalık satış karşılaştırma grafikleri, 14 günlük seyir, pasta/çubuk grafikler (istek: "şimdilik çıkar"). Sadece geçen hafta aynı günün kaydı `/api/reports/:date-7` ile okunur (kart notları için).
+- Sayfa yüksekliği sabit (297mm, taşan kesilir). Yoğun günle (9 masraf, 3 kurye, 3 banka satırı) test edildi ve sığıyor; listeler 6 satırda "+N kalem daha" ile kısaltılır. Yeni bölüm eklerken `.a4-sheet` scrollHeight ≤ clientHeight kontrol et.
+- Yazdırma: `body.printing-a4` sınıfı + `@media print` kuralları `src/index.css` içinde; `@page A4` yazdırma anında enjekte edilir. Gerçek yazıcı/PDF çıktısı henüz denenmedi ("Arka plan grafikleri" açık olmalı).
 
 ### 7. Banka gün sonu artık POS kartının içinde
 - `ZReportsSection.jsx`: her POS cihazında 3 banka alanı (`device.banka = [b1,b2,b3]`). Banka toplamı o cihazın kredi kartı tutarına eşitse Kredi Kartı yanında yeşil check; değilse "Eksik/Fazla" uyarısı. Banka dropdown'u (`bankId`) kaldırıldı.
