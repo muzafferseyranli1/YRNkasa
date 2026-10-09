@@ -1,6 +1,6 @@
 import React from 'react';
 import { LayoutGrid, Plus, Trash2, AlertTriangle } from 'lucide-react';
-import { formatCurrency, formatNumber, calculateKanalMetrics } from '../utils/calculations';
+import { formatCurrency, formatNumber, calculateKanalMetrics, getKanalEksikler } from '../utils/calculations';
 import NumberInput from './NumberInput';
 
 const cell =
@@ -14,6 +14,9 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
   const markalar = kanalCiro?.markalar || [];
   const satirlar = kanalCiro?.satirlar || [];
   const m = calculateKanalMetrics(kanalCiro);
+  const eksikler = getKanalEksikler(kanalCiro);
+  const isEksik = (rowId, markaId, field) => eksikler.some((e) => e.rowId === rowId && e.markaId === markaId && e.field === field);
+  const eksikCls = ' !bg-amber-100 !border-amber-400 focus:!border-amber-500';
   const fark = m.ciroToplam - toplamSatis;
   const farkVar = m.ciroToplam > 0 && Math.abs(fark) > 0.05;
 
@@ -154,7 +157,7 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                         type="number"
                         value={row.ciro?.[mk.id] ?? ''}
                         onChange={(e) => setValue(row.id, 'ciro', mk.id, e.target.value)}
-                        className={cell}
+                        className={cell + (isEksik(row.id, mk.id, 'ciro') ? eksikCls : '')}
                       />
                     </td>
                     <td colSpan={2} className="px-1 py-1">
@@ -171,7 +174,7 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
                         step="1"
                         value={row.adet?.[mk.id] ?? ''}
                         onChange={(e) => setValue(row.id, 'adet', mk.id, e.target.value)}
-                        className={cell + ' text-left !px-1.5'}
+                        className={cell + ' text-left !px-1.5' + (isEksik(row.id, mk.id, 'adet') ? eksikCls : '')}
                       />
                     </td>
                   </React.Fragment>
@@ -251,6 +254,16 @@ export default function KanalCiroSection({ kanalCiro, toplamSatis = 0, onChange 
           </tbody>
         </table>
       </div>
+
+      {eksikler.length > 0 && (
+        <div className="mt-3 flex gap-2 p-2.5 bg-amber-50 border border-amber-300 rounded-lg text-[11px] text-amber-900">
+          <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+          <span>
+            <b>{eksikler.length} alan boş:</b> Ciro girilen hücrede Adet, Adet girilen hücrede Ciro da girilmelidir (sarı alanlar).{' '}
+            Eksik bırakılırsa raporlar hatalı çıkabilir.
+          </span>
+        </div>
+      )}
     </div>
   );
 }

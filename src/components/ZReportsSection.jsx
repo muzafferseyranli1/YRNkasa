@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { ReceiptText, Plus, Trash2, Smartphone, CreditCard, CheckCircle2, Landmark } from 'lucide-react';
-import { formatCurrency, num, BANKA_SAYISI } from '../utils/calculations';
+import { formatCurrency, num, BANKA_SAYISI, BANKA_ADLARI } from '../utils/calculations';
 
 import NumberInput from './NumberInput';
 export default function ZReportsSection({ zBilgileri = {}, onChange }) {
@@ -44,6 +44,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
   };
 
   const totalKesilenNakit = posCihazlari.reduce((acc, d) => acc + num(d.nakit), 0);
+  const bankaToplamlari = BANKA_ADLARI.map((_, slot) => posCihazlari.reduce((acc, d) => acc + num(d.banka?.[slot]), 0));
   const totalFizikiKK = posCihazlari.reduce((acc, d) => acc + num(d.krediKarti), 0);
 
   return (
@@ -68,6 +69,12 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
             <span className="text-[11px] font-medium text-slate-400 block">Z Kredi Kartı Toplamı</span>
             <span className="text-xs font-bold text-amber-700">{formatCurrency(totalFizikiKK)}</span>
           </div>
+          {BANKA_ADLARI.map((ad, slot) => (
+            <div key={ad} className="text-right">
+              <span className="text-[11px] font-medium text-slate-400 block">{ad} Toplamı</span>
+              <span className="text-xs font-bold text-sky-700">{formatCurrency(bankaToplamlari[slot])}</span>
+            </div>
+          ))}
           <button
             onClick={handleAddDevice}
             className="flex items-center space-x-1 px-3 py-1.5 bg-amber-50 text-amber-800 hover:bg-amber-100 rounded-lg text-xs font-semibold transition-colors"
@@ -170,7 +177,7 @@ export default function ZReportsSection({ zBilgileri = {}, onChange }) {
                     <div className="grid grid-cols-3 gap-1.5">
                       {bankaTutarlari.map((v, slot) => (
                         <div key={slot}>
-                          <label className="block text-[9px] font-medium text-slate-400 mb-0.5">Banka {slot + 1}</label>
+                          <label className="block text-[9px] font-medium text-slate-400 mb-0.5">{BANKA_ADLARI[slot]}</label>
                           <NumberInput
                             type="number"
                             step="any"

@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatCurrency, formatNumber, num, resolvePosMarka, buildSummary, shiftDate } from '../utils/calculations';
+import { formatCurrency, formatNumber, num, resolvePosMarka, buildSummary, shiftDate, BANKA_ADLARI } from '../utils/calculations';
 
 /**
  * 80mm gün sonu raporu. İçerik ve sıra A4 raporuyla aynıdır (yalnızca biçim farklı):
@@ -254,7 +254,7 @@ export default function ThermalReceipt({ date, data, metrics, prev = { exists: f
                   <Row l={`${b.name}:`} v={formatCurrency(b.tutar)} />
                   {/* Cihazın Banka 1/2/3 kırılımı (yalnızca girilenler) */}
                   {((zBilgileri.posCihazlari || []).find((d) => d.id === b.id)?.banka || []).map((v, slot) =>
-                    num(v) !== 0 ? <Row key={slot} l={`Banka ${slot + 1}:`} v={formatCurrency(v)} small indent /> : null
+                    num(v) !== 0 ? <Row key={slot} l={`${BANKA_ADLARI[slot]}:`} v={formatCurrency(v)} small indent /> : null
                   )}
                   {b.cihazSayisi > 0 && <Row l={`Z: ${formatCurrency(b.zToplam)}`} v={`Fark: ${farkText(b.fark)}`} small indent />}
                 </div>

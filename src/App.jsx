@@ -18,7 +18,7 @@ import HistoryModal from './components/HistoryModal';
 import CourierReportsView from './components/reports/CourierReportsView';
 import TipReportsView from './components/reports/TipReportsView';
 import ArchiveReportsView from './components/reports/ArchiveReportsView';
-import { calculateReportMetrics, getDefaultReportData, normalizeReportData } from './utils/calculations';
+import { calculateReportMetrics, getKanalEksikler, getDefaultReportData, normalizeReportData } from './utils/calculations';
 import usePrevWeek from './utils/usePrevWeek';
 import { apiFetch } from './utils/api';
 
@@ -105,6 +105,18 @@ export default function App() {
   // Save report
   const handleSave = async () => {
     if (!data || !metrics) return;
+    const eksikler = getKanalEksikler(data.kanalCiro);
+    if (eksikler.length > 0) {
+      const liste = eksikler
+        .slice(0, 6)
+        .map((e) => `• ${e.rowName} / ${e.markaName}: ${e.field === 'ciro' ? 'Ciro' : 'Adet'} boş`)
+        .join('\n');
+      const fazla = eksikler.length > 6 ? `\n… ve ${eksikler.length - 6} alan daha` : '';
+      const devam = window.confirm(
+        `Doldurulması gereken alanlar boş bırakılmış, raporlar hatalı çıkabilir.\n\n${liste}${fazla}\n\nYine de kaydedilsin mi?`
+      );
+      if (!devam) return;
+    }
     setIsSaving(true);
     try {
       const res = await apiFetch(`/api/reports/${selectedDate}`, {

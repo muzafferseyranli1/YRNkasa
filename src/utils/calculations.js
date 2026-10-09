@@ -56,7 +56,8 @@ const migrateKanalCiro = (kanal) => {
 };
 
 // Banka gün sonu artık her POS cihazının içinde (device.banka = [Banka 1, Banka 2, Banka 3])
-export const BANKA_SAYISI = 3;
+export const BANKA_ADLARI = ['YKB', 'Ziraat', 'Banka 3'];
+export const BANKA_SAYISI = BANKA_ADLARI.length;
 export const getDefaultBankalar = () => [];
 
 // Eski kayıtlardaki genel banka listesi (bankaGunSonu) POS cihazlarının içine taşınır
@@ -134,6 +135,21 @@ export const buildSummary = (metrics, prevMetrics) => {
     ort: { toplam: avg(cur.toplam, cur.fis), salon: avg(cur.salon, cur.salonFis), paket: avg(cur.paket, cur.paketFis) },
     ortPrev: { toplam: avg(old.toplam, old.fis), salon: avg(old.salon, old.salonFis), paket: avg(old.paket, old.paketFis) },
   };
+};
+
+// Kanal tablosunda bir marka hücresinde Ciro girilmişse Adet de, Adet girilmişse Ciro da zorunlu.
+// Eksik kalan hücreleri { rowId, markaId, field, rowName, markaName } olarak döndürür.
+export const getKanalEksikler = (kanal) => {
+  const eksik = [];
+  (kanal?.satirlar || []).forEach((row) => {
+    (kanal?.markalar || []).forEach((m) => {
+      const ciro = num(row.ciro?.[m.id]);
+      const adet = num(row.adet?.[m.id]);
+      if (ciro !== 0 && adet === 0) eksik.push({ rowId: row.id, markaId: m.id, field: 'adet', rowName: row.name, markaName: m.name });
+      if (adet !== 0 && ciro === 0) eksik.push({ rowId: row.id, markaId: m.id, field: 'ciro', rowName: row.name, markaName: m.name });
+    });
+  });
+  return eksik;
 };
 
 export const calculateKanalMetrics = (kanal) => {
