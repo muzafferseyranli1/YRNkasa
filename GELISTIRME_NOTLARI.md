@@ -60,10 +60,12 @@ npm run dev:all   # arayüz :5173, API :3000   (ya da: npm run build && npm star
 - `KanalCiroSection.jsx`: eksik kutular sarı (amber), tablonun altında "N alan boş … raporlar hatalı çıkabilir" uyarısı.
 - `App.jsx` `handleSave`: eksik varsa onay penceresi (ilk 6 eksik listelenir, "Yine de kaydedilsin mi?"); engellemez.
 
-### 10. Özet Adisyon (80mm, YENİ - 2026-10-11)
+### 10. Özet Adisyon (80mm, YENİ - 2026-10-11, taslağa göre düzenlendi)
 - `src/components/SummaryReceipt.jsx` + Header'da "Özet Adisyon" butonu (teal). Önizleme penceresi + "Yazdır"; baskıda yalnızca fiş çıkar (`body.printing-summary`, `src/index.css`).
-- İçerik: Özet (satış/salon/paket/fiş/ortalama + geçen hafta %) → Ödeme Tipleri (tip | toplam, Denge+Suitable+marka birleşik) → Satış Kanalları (blok 1: kanal × marka cirosu, blok 2: kanal × ciro/online/adet; tutarlar kuruşsuz) → Z Toplamları (Z nakit, Z kredi kartı, YKB/Ziraat/Banka 3 toplamı) → Yemek Kartı Gün Sonu (gün sonu + fark).
-- Tam adisyon (`ThermalReceipt`) ve A4 ayrı kalır; bu rapor kısa özet içindir. Gerçek yazıcıda denenmedi.
+- Sıra (kullanıcının taslağı): Özet (satış/salon/paket/fiş/ortalama + geçen hafta %) → Satış Kanalları Dökümü (kanal → marka satırları "ciro / fiş sayısı", sonda marka bazlı Toplam) → Ödeme Tipleri (Nakit: toplam/denge/suitable + Z nakit; Kredi Kartı: toplam/denge/suitable + bahşiş + Z KK + YKB/Ziraat gün sonu + fark; online KK ve cari varsa; yemek çekleri: sistem/gün sonu/fark; platform kanalları: ciro/online + online alacak toplamı) → Ara Toplam (devir + elden nakit + satıştan gelen nakit) → Harcamalar → Adisyon (kurye) ödemeleri → Tip ödemeleri → Kasa Sonucu (sayım, fark, yarına devir).
+- Fark işareti: gün sonu − sistem (pozitif ARTI, negatif EKSİ). Kredi kartı sistemi = satış KK + kartla çekilen bahşiş (banka gün sonu bahşişi de içerir).
+- Taslakta "Harcamalar" iki kez geçiyordu; ikincisi yazım hatası sayıldı (Harcamalar listesi + toplamları tek bölüm).
+- Tam adisyon (`ThermalReceipt`) ve A4 ayrı kalır. Dolu bir günde fiş uzun çıkar (~60 cm); gerçek yazıcıda denenmedi.
 
 ## Dikkat: canlıda veri kaybı
 - Bir deploy sonrası canlıdaki eski veriler kayboldu (2026-10-09). Kod/DB yolu değişmedi; en olası neden Coolify'da `/app/data` için Persistent Storage tanımlı olmaması. Coolify'da Storage → Mount Path `/app/data` olduğundan emin ol, yoksa her deploy veritabanını sıfırlar.

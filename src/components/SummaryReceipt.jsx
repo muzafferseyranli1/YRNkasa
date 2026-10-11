@@ -1,17 +1,16 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X } from 'lucide-react';
-import { formatCurrency, formatNumber, num, resolvePosMarka, buildSummary, shiftDate, BANKA_ADLARI } from '../utils/calculations';
+import { formatCurrency, formatNumber, num, buildSummary, shiftDate, BANKA_ADLARI } from '../utils/calculations';
 
 /**
- * ÖZET ADİSYON (80mm): tek bakışta gün sonu.
- * Özet (satış/fiş/ortalama) → ödeme tipleri (tip | toplam) → kanallar (marka blok + toplam blok)
- * → Z toplamları (Z nakit, Z kredi kartı, banka toplamları) → yemek kartı gün sonu.
- * Kanal tabloları dar kâğıda sığsın diye tutarlar kuruşsuz (yuvarlanmış) basılır.
+ * ÖZET ADİSYON (80mm). Sıra:
+ * Özet → Satış Kanalları Dökümü (kanal → marka: ciro / fiş) + Toplam → Ödeme Tipleri (nakit, kredi kartı + banka gün sonu,
+ * yemek çekleri sistem/gün sonu, platform ciro/online) → Ara Toplam → Harcamalar → Adisyon (kurye) ödemeleri
+ * → Tip ödemeleri → Kasa Sonucu.
  */
 
 const INK = '#000';
-const fmt0 = (v) => Math.round(num(v)).toLocaleString('tr-TR');
 const tl = (v) => formatCurrency(v);
 const okv = (v) => Math.abs(num(v)) <= 0.05;
 const delta = (cur, prev) => (prev > 0 ? ((cur - prev) / prev) * 100 : null);
@@ -19,6 +18,8 @@ const dText = (d) => (d === null ? '' : ` ${d >= 0 ? '+' : '-'}%${Math.abs(d).to
 const shortDay = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
 const dateLabel = (dateStr) =>
   new Date(dateStr + 'T12:00:00').toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'short' });
+// Fark: gün sonu − sistem. Pozitif = artı, negatif = eksi
+const farkText = (d) => (okv(d) ? '✓ TAM' : `${d > 0 ? '+' : '-'}${formatCurrency(Math.abs(d))} (${d > 0 ? 'ARTI' : 'EKSİ'})`);
 
 const Sec = ({ title, children }) => (
   <div style={{ padding: '5px 0', borderBottom: `2px solid ${INK}` }}>
@@ -29,17 +30,20 @@ const Sec = ({ title, children }) => (
   </div>
 );
 
-const Row = ({ l, v, bold, small, indent }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontSize: small ? 10 : 12, fontWeight: bold ? 900 : 700, paddingLeft: indent ? 8 : 0, lineHeight: 1.35 }}>
+// indent: 0 = ana satır, 1 / 2 = girinti seviyesi
+const Row = ({ l, v, bold, small, indent = 0 }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontSize: small ? 10.5 : 12, fontWeight: bold ? 900 : 700, paddingLeft: indent * 10, lineHeight: 1.4 }}>
     <span>{l}</span>
     <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>{v}</span>
   </div>
 );
 
-const tbl = { width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: 11, fontWeight: 700 };
-const th = (align = 'right') => ({ textAlign: align, fontSize: 9.5, fontWeight: 900, padding: '1px 2px', borderBottom: `1px solid ${INK}`, textTransform: 'uppercase' });
-const td = (align = 'right', bold = false) => ({ textAlign: align, padding: '1px 2px', fontWeight: bold ? 900 : 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' });
-const totalRow = { borderTop: `1.5px solid ${INK}` };
+// Başlık satırı (alt satırları olan kalem adı)
+const Head = ({ children, mt = 5 }) => (
+  <div style={{ fontSize: 12.5, fontWeight: 900, marginTop: mt, textDecoration: 'underline', textUnderlineOffset: 2 }}>{children}</div>
+);
+
+const Rule = ({ heavy }) => <div style={{ borderTop: `${heavy ? 1.5 : 1}px solid ${INK}`, margin: '3px 0' }} />;
 
 export default function SummaryReceipt({ open, onClose, date, data, metrics, prev = { exists: false, metrics: null } }) {
   if (!open || !data || !metrics || typeof document === 'undefined') return null;
@@ -51,44 +55,61 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics, pre
   const sp = data.suitablePos || {};
   const z = data.zBilgileri || {};
   const cihazlar = z.posCihazlari || [];
+  const kasaGiris = data.kasaGiris || {};
 
   // ---- Özet ----
   const { cur, old, hasPrev, ort, ortPrev } = buildSummary(metrics, prev.metrics);
   const prevDate = shiftDate(date, -7);
 
-  // ---- Ödeme tipleri (Denge + Suitable + marka birleşik) ----
-  const pm = resolvePosMarka(data.posMarka, markalar, dp, sp);
-  const tipler = [
-    ['Nakit', 'nakit', true],
-    ['Kredi Kartı', 'krediKarti', true],
-    ['Online Kredi Kartı', 'onlineKrediKarti', false],
-    ['Cari', 'cari', false],
-    ['Sodexho', 'sodexho', false],
-    ['Multinet', 'multinet', false],
-    ['Ticket', 'ticket', false],
-    ['Setcard', 'setcard', false],
-  ];
-  const odemeRows = tipler
-    .map(([label, key, always]) => ({
-      label,
-      key,
-      total: markalar.reduce((t, mk) => t + num(pm[mk.id]?.denge?.[key]) + num(pm[mk.id]?.suitable?.[key]), 0),
-      always,
-    }))
-    .filter((r) => r.always || r.total !== 0);
-  const odemeToplam = odemeRows.reduce((t, r) => t + r.total, 0);
+  // ---- Satış kanalları: kanal → marka (ciro / fiş) ----
+  const hucre = (r, mk) => ({ ciro: num(r.ciro?.[mk.id]), adet: num(r.adet?.[mk.id]) });
+  const kanalRows = satirlar
+    .map((r) => ({ r, brands: markalar.map((mk) => ({ mk, ...hucre(r, mk) })).filter((b) => b.ciro !== 0 || b.adet !== 0) }))
+    .filter((x) => x.brands.length > 0);
+  const markaFis = (mk) => (kanal.markaSalonFis?.[mk.id] || 0) + (kanal.markaPaket?.[mk.id] || 0);
+  const toplamFis = (kanal.salonFisToplam || 0) + (kanal.paketToplam || 0);
 
-  // ---- Kanallar ----
-  const kanalRows = satirlar.filter((r) => {
-    const t = kanal.satirToplamlari?.[r.id] || {};
-    return (t.ciro || 0) !== 0 || (t.online || 0) !== 0 || (t.adet || 0) !== 0;
-  });
-  const adetToplam = (kanal.paketToplam || 0) + (kanal.salonFisToplam || 0);
-
-  // ---- Z toplamları ----
+  // ---- Ödeme tipleri ----
+  const split = (key) => ({ denge: num(dp[key]), suitable: num(sp[key]), toplam: num(dp[key]) + num(sp[key]) });
+  const nakit = split('nakit');
+  const kk = split('krediKarti');
+  const onlineKK = split('onlineKrediKarti');
+  const cari = split('cari');
   const zNakit = cihazlar.reduce((a, d) => a + num(d.nakit), 0);
   const zKK = cihazlar.reduce((a, d) => a + num(d.krediKarti), 0);
   const bankaToplamlari = BANKA_ADLARI.map((_, slot) => cihazlar.reduce((a, d) => a + num(d.banka?.[slot]), 0));
+  const bankaGunSonu = bankaToplamlari.reduce((a, v) => a + v, 0);
+  const bahsisKart = num(metrics.tipCekilenKartToplami);
+  const kkSistem = kk.toplam + bahsisKart; // banka gün sonu kartla çekilen bahşişi de içerir
+  const kkFark = bankaGunSonu - kkSistem;
+
+  const yemek = Object.entries(metrics.yemekKartlari || {}).filter(([, y]) => num(y.hesaplanan) !== 0 || num(y.fiziki) !== 0);
+  const platformlar = satirlar
+    .filter((r) => r.panel)
+    .map((r) => ({ name: r.name, ...(kanal.satirToplamlari?.[r.id] || {}) }))
+    .filter((p) => (p.ciro || 0) !== 0 || (p.online || 0) !== 0);
+
+  // ---- Harcama / kurye / bahşiş ----
+  const harcamalar = (data.harcamalar || []).filter((h) => num(h.tutar) > 0);
+  const kurye = (data.kuryeOdemeleri || [])
+    .map((k) => {
+      const count = num(k.siparisSayisi);
+      const unit = k.birimFiyat !== undefined && k.birimFiyat !== '' ? num(k.birimFiyat) : 20;
+      const total = k.toplamTutar !== undefined && k.toplamTutar !== '' ? num(k.toplamTutar) : count * unit;
+      return { name: k.kuryeAdi || 'Kurye', count, unit, total };
+    })
+    .filter((k) => k.count > 0 || k.total > 0);
+  const tips = (data.tipOdemeleri || [])
+    .map((t) => {
+      const kart = num(t.cekilenTip);
+      const rate = t.kesintiOrani !== undefined && t.kesintiOrani !== '' ? num(t.kesintiOrani) : 20;
+      const net = t.netNakitTip !== undefined && t.netNakitTip !== '' ? num(t.netNakitTip) : kart - kart * (rate / 100);
+      return { name: t.personelAdi || 'Personel', kart, net };
+    })
+    .filter((t) => t.kart > 0 || t.net > 0);
+
+  const kasaFarki = metrics.kasaFarki || 0;
+  const nakitGider = metrics.nakitHarcamalar ?? metrics.toplamHarcamalar;
 
   const handlePrint = () => {
     document.body.classList.add('printing-summary');
@@ -131,9 +152,9 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics, pre
         <Sec title="ÖZET">
           <Row l="TOPLAM SATIŞ:" v={`${tl(cur.toplam)}${hasPrev ? dText(delta(cur.toplam, old.toplam)) : ''}`} bold />
           <Row l="Salon:" v={`${tl(cur.salon)}${hasPrev ? dText(delta(cur.salon, old.salon)) : ''}`} />
-          <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={tl(ort.salon)} small indent />
+          <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={tl(ort.salon)} small indent={1} />
           <Row l="Paket:" v={`${tl(cur.paket)}${hasPrev ? dText(delta(cur.paket, old.paket)) : ''}`} />
-          <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent />
+          <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent={1} />
           <Row l="Fiş Sayısı:" v={`${formatNumber(cur.fis)}${hasPrev ? dText(delta(cur.fis, old.fis)) : ''}`} />
           <Row l="Ortalama Fiş:" v={`${tl(ort.toplam)}${hasPrev ? dText(delta(ort.toplam, ortPrev.toplam)) : ''}`} />
           <div style={{ fontSize: 10, fontWeight: 700, marginTop: 2 }}>
@@ -141,139 +162,166 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics, pre
           </div>
         </Sec>
 
-        {/* Ödeme tipleri: tip | toplam */}
+        {/* 1. Satış Kanalları Dökümü */}
+        <Sec title="SATIŞ KANALLARI DÖKÜMÜ">
+          {kanalRows.length ? (
+            <>
+              {kanalRows.map(({ r, brands }, i) => (
+                <div key={r.id}>
+                  <Head mt={i === 0 ? 0 : 5}>{r.name}</Head>
+                  {brands.map(({ mk, ciro, adet }) => (
+                    <Row key={mk.id} indent={1} l={`${mk.name} :`} v={`${tl(ciro)} / ${formatNumber(adet)}`} />
+                  ))}
+                </div>
+              ))}
+              <Rule heavy />
+              <Head mt={0}>Toplam</Head>
+              {markalar.map((mk) => (
+                <Row key={mk.id} indent={1} l={`${mk.name} :`} v={`${tl(kanal.markaCiro?.[mk.id])} / ${formatNumber(markaFis(mk))}`} />
+              ))}
+              <Row indent={1} bold l="Toplam :" v={`${tl(kanal.ciroToplam)} / ${formatNumber(toplamFis)}`} />
+              <div style={{ fontSize: 9.5, fontWeight: 700, marginTop: 2 }}>
+                Format: ciro / fiş (paket kanallarında paket) sayısı
+                {(kanal.kisiToplam || 0) > 0 ? ` · Salon kişi: ${formatNumber(kanal.kisiToplam)}` : ''}
+              </div>
+            </>
+          ) : (
+            <div style={{ fontSize: 11, fontWeight: 700 }}>Kanal bilgisi girilmedi</div>
+          )}
+        </Sec>
+
+        {/* 2. Ödeme tipleri */}
         <Sec title="ÖDEME TİPLERİ">
-          <table style={tbl}>
-            <tbody>
-              {odemeRows.map((r) => (
-                <tr key={r.key}>
-                  <td style={td('left')}>{r.label}</td>
-                  <td style={td('right', true)}>{tl(r.total)}</td>
-                </tr>
-              ))}
-              <tr style={totalRow}>
-                <td style={td('left', true)}>TOPLAM</td>
-                <td style={td('right', true)}>{tl(odemeToplam)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </Sec>
+          <Head mt={0}>Nakit</Head>
+          <Row indent={1} l="Toplam:" v={tl(nakit.toplam)} bold />
+          <Row indent={1} l="Denge:" v={tl(nakit.denge)} />
+          <Row indent={1} l="Suitable:" v={tl(nakit.suitable)} />
+          <Row indent={1} small l="Z nakit fişi:" v={tl(zNakit)} />
 
-        {/* Kanallar: marka bloğu + toplam bloğu */}
-        {kanalRows.length > 0 && (
-          <Sec title="SATIŞ KANALLARI">
-            <table style={tbl}>
-              <colgroup>
-                <col style={{ width: '31%' }} />
-                {markalar.map((mk) => (
-                  <col key={mk.id} style={{ width: `${69 / Math.max(markalar.length, 1)}%` }} />
-                ))}
-              </colgroup>
-              <thead>
-                <tr>
-                  <th style={th('left')}>Kanal</th>
-                  {markalar.map((mk) => (
-                    <th key={mk.id} style={th()}>{mk.name}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {kanalRows.map((r) => (
-                  <tr key={r.id}>
-                    <td style={td('left')}>{r.name}</td>
-                    {markalar.map((mk) => (
-                      <td key={mk.id} style={td()}>{fmt0(r.ciro?.[mk.id])}</td>
-                    ))}
-                  </tr>
-                ))}
-                <tr style={totalRow}>
-                  <td style={td('left', true)}>TOPLAM</td>
-                  {markalar.map((mk) => (
-                    <td key={mk.id} style={td('right', true)}>{fmt0(kanal.markaCiro?.[mk.id])}</td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+          <Head>Kredi Kartı</Head>
+          <Row indent={1} l="Toplam:" v={tl(kk.toplam)} bold />
+          <Row indent={1} l="Denge:" v={tl(kk.denge)} />
+          <Row indent={1} l="Suitable:" v={tl(kk.suitable)} />
+          {bahsisKart > 0 && <Row indent={1} small l="+ Karttan çekilen bahşiş:" v={tl(bahsisKart)} />}
+          <Row indent={1} small l="Z kredi kartı:" v={tl(zKK)} />
+          {BANKA_ADLARI.map((ad, slot) =>
+            slot < 2 || bankaToplamlari[slot] !== 0 ? <Row key={ad} indent={2} l={`${ad} gün sonu:`} v={tl(bankaToplamlari[slot])} /> : null
+          )}
+          {bankaGunSonu !== 0 ? (
+            <Row bold l="Fark (gün sonu − sistem):" v={farkText(kkFark)} />
+          ) : (
+            <div style={{ fontSize: 10.5, fontWeight: 700, paddingLeft: 10 }}>Banka gün sonu girilmedi</div>
+          )}
 
-            <div style={{ borderTop: `1px dashed ${INK}`, margin: '5px 0 3px' }} />
+          {onlineKK.toplam !== 0 && (
+            <>
+              <Head>Online Kredi Kartı</Head>
+              <Row indent={1} l="Toplam:" v={tl(onlineKK.toplam)} bold />
+              <Row indent={1} l="Denge:" v={tl(onlineKK.denge)} />
+              <Row indent={1} l="Suitable:" v={tl(onlineKK.suitable)} />
+            </>
+          )}
 
-            <table style={tbl}>
-              <colgroup>
-                <col style={{ width: '31%' }} />
-                <col style={{ width: '25%' }} />
-                <col style={{ width: '25%' }} />
-                <col style={{ width: '19%' }} />
-              </colgroup>
-              <thead>
-                <tr>
-                  <th style={th('left')}>Kanal</th>
-                  <th style={th()}>Ciro</th>
-                  <th style={th()}>Online</th>
-                  <th style={th()}>Adet</th>
-                </tr>
-              </thead>
-              <tbody>
-                {kanalRows.map((r) => {
-                  const t = kanal.satirToplamlari?.[r.id] || {};
-                  return (
-                    <tr key={r.id}>
-                      <td style={td('left')}>{r.name}</td>
-                      <td style={td()}>{fmt0(t.ciro)}</td>
-                      <td style={td()}>{(t.online || 0) ? fmt0(t.online) : '-'}</td>
-                      <td style={td()}>{formatNumber(t.adet || 0)}</td>
-                    </tr>
-                  );
-                })}
-                <tr style={totalRow}>
-                  <td style={td('left', true)}>TOPLAM</td>
-                  <td style={td('right', true)}>{fmt0(kanal.ciroToplam)}</td>
-                  <td style={td('right', true)}>{fmt0(kanal.onlineToplam)}</td>
-                  <td style={td('right', true)}>{formatNumber(adetToplam)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div style={{ fontSize: 9.5, fontWeight: 700, marginTop: 2 }}>
-              Tutarlar ₺, kuruşsuz yuvarlanmıştır. Paket: {formatNumber(kanal.paketToplam)} · Salon fiş: {formatNumber(kanal.salonFisToplam)}
-              {(kanal.kisiToplam || 0) > 0 ? ` · Kişi: ${formatNumber(kanal.kisiToplam)}` : ''}
+          {cari.toplam !== 0 && (
+            <>
+              <Head>Cari</Head>
+              <Row indent={1} l="Toplam:" v={tl(cari.toplam)} bold />
+              <Row indent={1} l="Denge:" v={tl(cari.denge)} />
+              <Row indent={1} l="Suitable:" v={tl(cari.suitable)} />
+            </>
+          )}
+
+          {yemek.map(([key, y]) => (
+            <div key={key}>
+              <Head>{key.charAt(0).toUpperCase() + key.slice(1)}</Head>
+              <Row indent={1} l="Sistem:" v={tl(y.hesaplanan)} />
+              <Row indent={2} l="Gün sonu:" v={tl(y.fiziki)} />
+              <Row bold l="Fark (gün sonu − sistem):" v={farkText(y.fark)} />
             </div>
-          </Sec>
-        )}
-
-        {/* Z toplamları */}
-        <Sec title="Z TOPLAMLARI">
-          <Row l="Z Nakit Fişi Toplamı:" v={tl(zNakit)} bold />
-          <Row l="Z Kredi Kartı Toplamı:" v={tl(zKK)} bold />
-          {BANKA_ADLARI.map((ad, slot) => (
-            <Row key={ad} l={`${ad} Toplamı:`} v={tl(bankaToplamlari[slot])} />
           ))}
+
+          {platformlar.map((p) => (
+            <div key={p.name}>
+              <Head>{p.name}</Head>
+              <Row indent={1} l="Ciro:" v={tl(p.ciro)} />
+              <Row indent={1} l="Online:" v={tl(p.online)} />
+            </div>
+          ))}
+          {platformlar.length > 0 && (
+            <>
+              <Rule />
+              <Row bold l="Online alacak toplam:" v={tl(kanal.onlineToplam)} />
+            </>
+          )}
         </Sec>
 
-        {/* Yemek kartı gün sonu */}
-        <Sec title="YEMEK KARTI GÜN SONU">
-          <table style={tbl}>
-            <colgroup>
-              <col style={{ width: '32%' }} />
-              <col style={{ width: '38%' }} />
-              <col style={{ width: '30%' }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th style={th('left')}>Kart</th>
-                <th style={th()}>Gün Sonu</th>
-                <th style={th()}>Fark</th>
-              </tr>
-            </thead>
-            <tbody>
-              {Object.entries(metrics.yemekKartlari || {}).map(([key, y]) => (
-                <tr key={key}>
-                  <td style={td('left')}>{key.charAt(0).toUpperCase() + key.slice(1)}</td>
-                  <td style={td()}>{tl(y.fiziki)}</td>
-                  <td style={td('right', true)}>{okv(y.fark) ? '✓' : tl(y.fark)}</td>
-                </tr>
+        {/* 3. Ara toplam */}
+        <Sec title="ARA TOPLAM">
+          <Row l="Devir:" v={tl(kasaGiris.devir)} />
+          <Row l="+ Elden nakit girişi:" v={tl(kasaGiris.kasayaParaKondu)} />
+          <Row l="+ Satıştan gelen nakit:" v={tl(nakit.toplam)} />
+          <Rule heavy />
+          <Row bold l="ARA TOPLAM:" v={tl(metrics.toplamNakitGiris)} />
+        </Sec>
+
+        {/* 4. Harcamalar */}
+        <Sec title="HARCAMALAR">
+          {harcamalar.length ? (
+            harcamalar.map((h, i) => (
+              <Row key={i} l={`${h.isKK ? '[KK] ' : ''}${h.title || 'Gider'}${h.aciklama ? ` (${String(h.aciklama).slice(0, 24)})` : ''}:`} v={tl(h.tutar)} />
+            ))
+          ) : (
+            <div style={{ fontSize: 11, fontWeight: 700 }}>Gider girilmedi</div>
+          )}
+          <Rule heavy />
+          <Row bold l="Nakit çıkan:" v={tl(nakitGider)} />
+          {(metrics.kkHarcamalar || 0) > 0 && <Row l="KK ile ödenen:" v={tl(metrics.kkHarcamalar)} />}
+        </Sec>
+
+        {/* 5. Adisyon (kurye) ödemeleri */}
+        <Sec title="ADİSYON ÖDEMELERİ">
+          {kurye.length ? (
+            <>
+              {kurye.map((k, i) => (
+                <Row key={i} l={`${k.name} (${formatNumber(k.count)}x${formatNumber(k.unit)}₺):`} v={tl(k.total)} />
               ))}
-            </tbody>
-          </table>
-          <div style={{ fontSize: 9.5, fontWeight: 700, marginTop: 2 }}>Fark = gün sonu − sistem satışı</div>
+              <Rule heavy />
+              <Row bold l={`Toplam (${formatNumber(metrics.kuryeToplamSiparisSayisi)} sipariş):`} v={tl(metrics.kuryeOdemeleriToplami)} />
+            </>
+          ) : (
+            <div style={{ fontSize: 11, fontWeight: 700 }}>Kurye ödemesi yok</div>
+          )}
+        </Sec>
+
+        {/* 6. Tip ödemeleri */}
+        <Sec title="TİP ÖDEMELERİ">
+          {tips.length ? (
+            <>
+              {tips.map((t, i) => (
+                <Row key={i} l={`${t.name} (kart ${tl(t.kart)}):`} v={tl(t.net)} />
+              ))}
+              <Rule heavy />
+              <Row l="Karttan çekilen:" v={tl(metrics.tipCekilenKartToplami)} />
+              <Row l="Kesinti:" v={tl(metrics.tipKesintiToplami)} />
+              <Row bold l="Kasadan ödenen net nakit:" v={tl(metrics.tipNetNakitToplami)} />
+            </>
+          ) : (
+            <div style={{ fontSize: 11, fontWeight: 700 }}>Bahşiş ödemesi yok</div>
+          )}
+        </Sec>
+
+        {/* 7. Kasa sonucu */}
+        <Sec title="KASA SONUCU">
+          <Row l="Ara toplam:" v={tl(metrics.toplamNakitGiris)} />
+          <Row l="− Harcamalar (nakit):" v={tl(nakitGider)} indent={1} small />
+          <Row l="− Adisyon ödemeleri:" v={tl(metrics.kuryeOdemeleriToplami)} indent={1} small />
+          <Row l="− Tip ödemeleri (net):" v={tl(metrics.tipNetNakitToplami)} indent={1} small />
+          <Rule heavy />
+          <Row bold l="KASA SONUCU:" v={tl(metrics.hesaplananNakit)} />
+          <Row bold l="SAYIM (fiziki):" v={tl(metrics.fizikiSayim)} />
+          <Row bold l="Fark (sayım − kasa):" v={farkText(kasaFarki)} />
+          <Rule />
+          <Row l="Yarına devir:" v={tl(metrics.fizikiSayim)} />
         </Sec>
 
         <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 900, paddingTop: 5, textTransform: 'uppercase', letterSpacing: 1 }}>
