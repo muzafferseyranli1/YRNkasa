@@ -65,6 +65,25 @@
     display: none !important;
   }
 
+  /* Özet adisyon (80mm): yalnızca özet fiş yazdırılır */
+  body.printing-summary #root,
+  body.printing-summary .thermal-receipt-container,
+  body.printing-summary .sum-toolbar {
+    display: none !important;
+  }
+  body.printing-summary .sum-overlay {
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body.printing-summary .sum-sheet {
+    box-shadow: none !important;
+    margin: 0 auto !important;
+    width: 78mm !important;
+    color: #000000 !important;
+  }
+
   /* A4 gün sonu raporu: yalnızca rapor sayfası yazdırılır */
   body.printing-a4 {
     width: 210mm !important;

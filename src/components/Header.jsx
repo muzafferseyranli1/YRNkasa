@@ -7,6 +7,7 @@ export default function Header({
   onSave,
   onPrint,
   onOpenA4,
+  onOpenSummary,
   onOpenHistory,
   isSaving,
   hasUnsavedChanges,
@@ -118,6 +119,15 @@ export default function Header({
             >
               <Printer className="w-4 h-4 text-indigo-800" />
               <span>A4 Rapor</span>
+            </button>
+
+            <button
+              onClick={onOpenSummary}
+              className="flex items-center space-x-1.5 px-3.5 py-2 text-sm font-medium bg-teal-100 hover:bg-teal-200 text-teal-900 rounded-xl transition-colors shadow-xs"
+              title="80mm özet adisyon (satış, ödeme tipleri, kanallar, Z toplamları)"
+            >
+              <Printer className="w-4 h-4 text-teal-800" />
+              <span>Özet Adisyon</span>
             </button>
 
             <button

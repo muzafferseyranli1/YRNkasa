@@ -60,6 +60,11 @@ npm run dev:all   # arayüz :5173, API :3000   (ya da: npm run build && npm star
 - `KanalCiroSection.jsx`: eksik kutular sarı (amber), tablonun altında "N alan boş … raporlar hatalı çıkabilir" uyarısı.
 - `App.jsx` `handleSave`: eksik varsa onay penceresi (ilk 6 eksik listelenir, "Yine de kaydedilsin mi?"); engellemez.
 
+### 10. Özet Adisyon (80mm, YENİ - 2026-10-11)
+- `src/components/SummaryReceipt.jsx` + Header'da "Özet Adisyon" butonu (teal). Önizleme penceresi + "Yazdır"; baskıda yalnızca fiş çıkar (`body.printing-summary`, `src/index.css`).
+- İçerik: Özet (satış/salon/paket/fiş/ortalama + geçen hafta %) → Ödeme Tipleri (tip | toplam, Denge+Suitable+marka birleşik) → Satış Kanalları (blok 1: kanal × marka cirosu, blok 2: kanal × ciro/online/adet; tutarlar kuruşsuz) → Z Toplamları (Z nakit, Z kredi kartı, YKB/Ziraat/Banka 3 toplamı) → Yemek Kartı Gün Sonu (gün sonu + fark).
+- Tam adisyon (`ThermalReceipt`) ve A4 ayrı kalır; bu rapor kısa özet içindir. Gerçek yazıcıda denenmedi.
+
 ## Dikkat: canlıda veri kaybı
 - Bir deploy sonrası canlıdaki eski veriler kayboldu (2026-10-09). Kod/DB yolu değişmedi; en olası neden Coolify'da `/app/data` için Persistent Storage tanımlı olmaması. Coolify'da Storage → Mount Path `/app/data` olduğundan emin ol, yoksa her deploy veritabanını sıfırlar.
 
