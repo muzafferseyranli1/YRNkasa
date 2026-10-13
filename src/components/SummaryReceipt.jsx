@@ -35,10 +35,11 @@ const Row = ({ l, v, bold, small, indent = 0 }) => (
   </div>
 );
 
+// Başlık stili: kanal / ödeme tipi başlıkları ile Özet'teki Salon: / Paket: etiketleri aynıdır
+const headStyle = { fontSize: 12.5, fontWeight: 900, textDecoration: 'underline', textUnderlineOffset: 2 };
+
 // Başlık satırı (alt satırları olan kalem adı)
-const Head = ({ children, mt = 5 }) => (
-  <div style={{ fontSize: 12.5, fontWeight: 900, marginTop: mt, textDecoration: 'underline', textUnderlineOffset: 2 }}>{children}</div>
-);
+const Head = ({ children, mt = 5 }) => <div style={{ ...headStyle, marginTop: mt }}>{children}</div>;
 
 const Rule = ({ heavy }) => <div style={{ borderTop: `${heavy ? 1.5 : 1}px solid ${INK}`, margin: '3px 0' }} />;
 
@@ -143,10 +144,10 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
         {/* Özet */}
         <Sec title="ÖZET">
           <Row l="TOPLAM SATIŞ:" v={tl(cur.toplam)} bold />
-          <Row l={<span style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>Salon:</span>} v={tl(cur.salon)} />
+          <Row l={<span style={headStyle}>Salon:</span>} v={tl(cur.salon)} />
           <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={tl(ort.salon)} small indent={1} />
           {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · ort.`} v={tl(ort.kisiBasi)} small indent={1} />}
-          <Row l={<span style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>Paket:</span>} v={tl(cur.paket)} />
+          <Row l={<span style={headStyle}>Paket:</span>} v={tl(cur.paket)} />
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent={1} />
           {cur.paketKisi > 0 && <Row l={`${formatNumber(cur.paketKisi)} kişi* · ort.`} v={tl(ort.paketKisiBasi)} small indent={1} />}
           <Row l="Fiş Sayısı:" v={formatNumber(cur.fis)} />
