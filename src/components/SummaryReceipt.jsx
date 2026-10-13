@@ -143,10 +143,10 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
         {/* Özet */}
         <Sec title="ÖZET">
           <Row l="TOPLAM SATIŞ:" v={tl(cur.toplam)} bold />
-          <Row l="Salon:" v={tl(cur.salon)} />
+          <Row l={<span style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>Salon:</span>} v={tl(cur.salon)} />
           <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={tl(ort.salon)} small indent={1} />
           {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · ort.`} v={tl(ort.kisiBasi)} small indent={1} />}
-          <Row l="Paket:" v={tl(cur.paket)} />
+          <Row l={<span style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>Paket:</span>} v={tl(cur.paket)} />
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent={1} />
           {cur.paketKisi > 0 && <Row l={`${formatNumber(cur.paketKisi)} kişi* · ort.`} v={tl(ort.paketKisiBasi)} small indent={1} />}
           <Row l="Fiş Sayısı:" v={formatNumber(cur.fis)} />

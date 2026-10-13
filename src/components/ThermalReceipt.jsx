@@ -115,10 +115,10 @@ export default function ThermalReceipt({ date, data, metrics, prev = { exists: f
       <Sec title="ÖZET">
         <div className="space-y-1 text-sm font-bold">
           <Row l="TOPLAM SATIŞ:" v={`${formatCurrency(cur.toplam)}${hasPrev ? dText(delta(cur.toplam, old.toplam)) : ''}`} bold />
-          <Row l="Salon:" v={`${formatCurrency(cur.salon)}${hasPrev ? dText(delta(cur.salon, old.salon)) : ''}`} />
+          <Row l={<span style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>Salon:</span>} v={`${formatCurrency(cur.salon)}${hasPrev ? dText(delta(cur.salon, old.salon)) : ''}`} />
           <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={formatCurrency(ort.salon)} small indent />
           {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · ort.`} v={formatCurrency(ort.kisiBasi)} small indent />}
-          <Row l="Paket:" v={`${formatCurrency(cur.paket)}${hasPrev ? dText(delta(cur.paket, old.paket)) : ''}`} />
+          <Row l={<span style={{ textDecoration: 'underline', textUnderlineOffset: 2 }}>Paket:</span>} v={`${formatCurrency(cur.paket)}${hasPrev ? dText(delta(cur.paket, old.paket)) : ''}`} />
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={formatCurrency(ort.paket)} small indent />
           {cur.paketKisi > 0 && <Row l={`${formatNumber(cur.paketKisi)} kişi* · ort.`} v={formatCurrency(ort.paketKisiBasi)} small indent />}
           <Row l="Fiş Sayısı:" v={`${formatNumber(cur.fis)}${hasPrev ? dText(delta(cur.fis, old.fis)) : ''}`} />
