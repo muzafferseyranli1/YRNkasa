@@ -1,7 +1,7 @@
 import React from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X } from 'lucide-react';
-import { formatCurrency, formatNumber, num, buildSummary, shiftDate, BANKA_ADLARI } from '../utils/calculations';
+import { formatCurrency, formatNumber, num, buildSummary, BANKA_ADLARI } from '../utils/calculations';
 
 /**
  * ÖZET ADİSYON (80mm). Sıra:
@@ -13,9 +13,6 @@ import { formatCurrency, formatNumber, num, buildSummary, shiftDate, BANKA_ADLAR
 const INK = '#000';
 const tl = (v) => formatCurrency(v);
 const okv = (v) => Math.abs(num(v)) <= 0.05;
-const delta = (cur, prev) => (prev > 0 ? ((cur - prev) / prev) * 100 : null);
-const dText = (d) => (d === null ? '' : ` ${d >= 0 ? '+' : '-'}%${Math.abs(d).toFixed(1).replace('.', ',')}`);
-const shortDay = (dateStr) => new Date(dateStr + 'T12:00:00').toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit' });
 const dateLabel = (dateStr) =>
   new Date(dateStr + 'T12:00:00').toLocaleDateString('tr-TR', { day: '2-digit', month: '2-digit', year: 'numeric', weekday: 'short' });
 // Fark: gün sonu − sistem. Pozitif = artı, negatif = eksi
@@ -45,7 +42,7 @@ const Head = ({ children, mt = 5 }) => (
 
 const Rule = ({ heavy }) => <div style={{ borderTop: `${heavy ? 1.5 : 1}px solid ${INK}`, margin: '3px 0' }} />;
 
-export default function SummaryReceipt({ open, onClose, date, data, metrics, prev = { exists: false, metrics: null } }) {
+export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
   if (!open || !data || !metrics || typeof document === 'undefined') return null;
 
   const markalar = data.kanalCiro?.markalar || [];
@@ -57,9 +54,8 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics, pre
   const cihazlar = z.posCihazlari || [];
   const kasaGiris = data.kasaGiris || {};
 
-  // ---- Özet ----
-  const { cur, old, hasPrev, ort, ortPrev } = buildSummary(metrics, prev.metrics);
-  const prevDate = shiftDate(date, -7);
+  // ---- Özet (bu rapor yalnızca günün kendisini gösterir, geçen hafta kıyası yok) ----
+  const { cur, ort } = buildSummary(metrics, null);
 
   // ---- Satış kanalları: kanal → marka (ciro / fiş) ----
   const hucre = (r, mk) => ({ ciro: num(r.ciro?.[mk.id]), adet: num(r.adet?.[mk.id]) });
@@ -150,15 +146,15 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics, pre
 
         {/* Özet */}
         <Sec title="ÖZET">
-          <Row l="TOPLAM SATIŞ:" v={`${tl(cur.toplam)}${hasPrev ? dText(delta(cur.toplam, old.toplam)) : ''}`} bold />
-          <Row l="Salon:" v={`${tl(cur.salon)}${hasPrev ? dText(delta(cur.salon, old.salon)) : ''}`} />
+          <Row l="TOPLAM SATIŞ:" v={tl(cur.toplam)} bold />
+          <Row l="Salon:" v={tl(cur.salon)} />
           <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={tl(ort.salon)} small indent={1} />
           {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · kişi başı ort.`} v={tl(ort.kisiBasi)} small indent={1} />}
-          <Row l="Paket:" v={`${tl(cur.paket)}${hasPrev ? dText(delta(cur.paket, old.paket)) : ''}`} />
+          <Row l="Paket:" v={tl(cur.paket)} />
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent={1} />
           {cur.paketKisi > 0 && <Row l={`${formatNumber(cur.paketKisi)} kişi* · kişi başı ort.`} v={tl(ort.paketKisiBasi)} small indent={1} />}
-          <Row l="Fiş Sayısı:" v={`${formatNumber(cur.fis)}${hasPrev ? dText(delta(cur.fis, old.fis)) : ''}`} />
-          <Row l="Ortalama Fiş:" v={`${tl(ort.toplam)}${hasPrev ? dText(delta(ort.toplam, ortPrev.toplam)) : ''}`} />
+          <Row l="Fiş Sayısı:" v={formatNumber(cur.fis)} />
+          <Row l="Ortalama Fiş:" v={tl(ort.toplam)} />
           {cur.kisi > 0 && (
             <>
               <Row l="Konsolide kişi başı ort.:" v={tl(ort.konsolideKisiBasi)} />
@@ -166,9 +162,6 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics, pre
             </>
           )}
           {cur.paketKisi > 0 && <div style={{ fontSize: 9.5, fontWeight: 700 }}>* Paket kişi = sipariş × 1,5 (yukarı yuvarlanır)</div>}
-          <div style={{ fontSize: 10, fontWeight: 700, marginTop: 2 }}>
-            {hasPrev ? `Kıyas: geçen hf. ${shortDay(prevDate)} → ${tl(old.toplam)} · ${formatNumber(old.fis)} fiş` : 'Geçen hafta aynı gün kaydı yok'}
-          </div>
         </Sec>
 
         {/* 1. Satış Kanalları Dökümü */}

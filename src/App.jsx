@@ -301,7 +301,7 @@ export default function App() {
       )}
 
       {/* A4 Gün Sonu Rapor Sayfası */}
-      <SummaryReceipt open={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} date={selectedDate} data={data} metrics={metrics} prev={prevWeek} />
+      <SummaryReceipt open={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} date={selectedDate} data={data} metrics={metrics} />
 
       <A4Report open={isA4Open} onClose={() => setIsA4Open(false)} date={selectedDate} data={data} metrics={metrics} prev={prevWeek} />
 
