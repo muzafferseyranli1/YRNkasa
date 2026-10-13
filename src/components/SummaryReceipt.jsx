@@ -20,7 +20,7 @@ const farkText = (d) => (okv(d) ? '✓ TAM' : `${d > 0 ? '+' : '-'}${formatCurre
 
 const Sec = ({ title, children }) => (
   <div style={{ padding: '5px 0', borderBottom: `2px solid ${INK}` }}>
-    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 12, textTransform: 'uppercase', paddingBottom: 2, marginBottom: 4, borderBottom: `1px solid ${INK}` }}>
+    <div style={{ textAlign: 'center', fontWeight: 900, fontSize: 13, textTransform: 'uppercase', paddingBottom: 2, marginBottom: 4, borderBottom: `1px solid ${INK}` }}>
       --- {title} ---
     </div>
     {children}
@@ -29,14 +29,14 @@ const Sec = ({ title, children }) => (
 
 // indent: 0 = ana satır, 1 / 2 = girinti seviyesi
 const Row = ({ l, v, bold, small, indent = 0 }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontSize: small ? 10.5 : 12, fontWeight: bold ? 900 : 700, paddingLeft: indent * 10, lineHeight: 1.4 }}>
+  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 6, fontSize: small ? 11.5 : 13, fontWeight: bold ? 900 : 700, paddingLeft: indent * 10, lineHeight: 1.4 }}>
     <span>{l}</span>
     <span style={{ whiteSpace: 'nowrap', textAlign: 'right' }}>{v}</span>
   </div>
 );
 
 // Başlık stili: kanal / ödeme tipi başlıkları ile Özet'teki Salon: / Paket: etiketleri aynıdır
-const headStyle = { fontSize: 12.5, fontWeight: 900, textDecoration: 'underline', textUnderlineOffset: 2 };
+const headStyle = { fontSize: 13.5, fontWeight: 900, textDecoration: 'underline', textUnderlineOffset: 2 };
 
 // Başlık satırı (alt satırları olan kalem adı)
 const Head = ({ children, mt = 5 }) => <div style={{ ...headStyle, marginTop: mt }}>{children}</div>;
@@ -134,9 +134,9 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
       >
         {/* Başlık */}
         <div style={{ textAlign: 'center', paddingBottom: 5, borderBottom: `2px solid ${INK}` }}>
-          <div style={{ fontSize: 20, fontWeight: 900, letterSpacing: 0.5, lineHeight: 1.1 }}>YRN RESTORAN</div>
-          <div style={{ fontSize: 13, fontWeight: 900, textTransform: 'uppercase' }}>ÖZET GÜN SONU</div>
-          <div style={{ fontSize: 12, fontWeight: 700 }}>
+          <div style={{ fontSize: 21, fontWeight: 900, letterSpacing: 0.5, lineHeight: 1.1 }}>YRN RESTORAN</div>
+          <div style={{ fontSize: 14, fontWeight: 900, textTransform: 'uppercase' }}>ÖZET GÜN SONU</div>
+          <div style={{ fontSize: 13, fontWeight: 700 }}>
             {dateLabel(date)} • {new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
           </div>
         </div>
@@ -186,13 +186,13 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
               ))}
               <Row indent={1} bold l="Toplam :" v={`${tl(kanal.ciroToplam)} / ${formatNumber(toplamFis)}`} />
               {num(kanal.onlineToplam) !== 0 && <Row indent={2} bold l="Online alacak toplam:" v={tl(kanal.onlineToplam)} />}
-              <div style={{ fontSize: 9.5, fontWeight: 700, marginTop: 2 }}>
+              <div style={{ fontSize: 10.5, fontWeight: 700, marginTop: 2 }}>
                 Format: ciro / fiş (paket kanallarında paket) sayısı
                 {(kanal.kisiToplam || 0) > 0 ? ` · Salon kişi: ${formatNumber(kanal.kisiToplam)}` : ''}
               </div>
             </>
           ) : (
-            <div style={{ fontSize: 11, fontWeight: 700 }}>Kanal bilgisi girilmedi</div>
+            <div style={{ fontSize: 12, fontWeight: 700 }}>Kanal bilgisi girilmedi</div>
           )}
         </Sec>
 
@@ -216,7 +216,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
           {bankaGunSonu !== 0 ? (
             <Row bold l="Fark:" v={farkText(kkFark)} />
           ) : (
-            <div style={{ fontSize: 10.5, fontWeight: 700, paddingLeft: 10 }}>Banka gün sonu girilmedi</div>
+            <div style={{ fontSize: 11.5, fontWeight: 700, paddingLeft: 10 }}>Banka gün sonu girilmedi</div>
           )}
 
           {onlineKK.toplam !== 0 && (
@@ -263,7 +263,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
               <Row key={i} l={`${h.isKK ? '[KK] ' : ''}${h.title || 'Gider'}${h.aciklama ? ` (${String(h.aciklama).slice(0, 24)})` : ''}:`} v={tl(h.tutar)} />
             ))
           ) : (
-            <div style={{ fontSize: 11, fontWeight: 700 }}>Gider girilmedi</div>
+            <div style={{ fontSize: 12, fontWeight: 700 }}>Gider girilmedi</div>
           )}
           <Rule heavy />
           <Row bold l="Nakit çıkan:" v={tl(nakitGider)} />
@@ -281,7 +281,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
               <Row bold l={`Toplam (${formatNumber(metrics.kuryeToplamSiparisSayisi)} sipariş):`} v={tl(metrics.kuryeOdemeleriToplami)} />
             </>
           ) : (
-            <div style={{ fontSize: 11, fontWeight: 700 }}>Kurye ödemesi yok</div>
+            <div style={{ fontSize: 12, fontWeight: 700 }}>Kurye ödemesi yok</div>
           )}
         </Sec>
 
@@ -298,7 +298,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
               <Row bold l="Kasadan ödenen net nakit:" v={tl(metrics.tipNetNakitToplami)} />
             </>
           ) : (
-            <div style={{ fontSize: 11, fontWeight: 700 }}>Bahşiş ödemesi yok</div>
+            <div style={{ fontSize: 12, fontWeight: 700 }}>Bahşiş ödemesi yok</div>
           )}
         </Sec>
 
@@ -317,10 +317,10 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
         </Sec>
 
         {cur.paketKisi > 0 && (
-          <div style={{ fontSize: 9.5, fontWeight: 700, paddingTop: 4 }}>* Paket kişi = sipariş × 1,5 (yukarı yuvarlanır)</div>
+          <div style={{ fontSize: 10.5, fontWeight: 700, paddingTop: 4 }}>* Paket kişi = sipariş × 1,5 (yukarı yuvarlanır)</div>
         )}
 
-        <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 900, paddingTop: 5, textTransform: 'uppercase', letterSpacing: 1 }}>
+        <div style={{ textAlign: 'center', fontSize: 11, fontWeight: 900, paddingTop: 5, textTransform: 'uppercase', letterSpacing: 1 }}>
           *** ÖZET GÜN SONU ***
         </div>
       </div>
