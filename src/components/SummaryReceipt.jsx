@@ -214,7 +214,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
             slot < 2 || bankaToplamlari[slot] !== 0 ? <Row key={ad} indent={2} l={`${ad} gün sonu:`} v={tl(bankaToplamlari[slot])} /> : null
           )}
           {bankaGunSonu !== 0 ? (
-            <Row bold l="Fark (gün sonu − sistem):" v={farkText(kkFark)} />
+            <Row bold l="Fark:" v={farkText(kkFark)} />
           ) : (
             <div style={{ fontSize: 10.5, fontWeight: 700, paddingLeft: 10 }}>Banka gün sonu girilmedi</div>
           )}
@@ -242,7 +242,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
               <Head>{key.charAt(0).toUpperCase() + key.slice(1)}</Head>
               <Row indent={1} l="Sistem:" v={tl(y.hesaplanan)} />
               <Row indent={2} l="Gün sonu:" v={tl(y.fiziki)} />
-              <Row bold l="Fark (gün sonu − sistem):" v={farkText(y.fark)} />
+              <Row bold l="Fark:" v={farkText(y.fark)} />
             </div>
           ))}
         </Sec>
