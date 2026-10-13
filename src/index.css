@@ -44,9 +44,9 @@
 
   .thermal-receipt-container {
     display: block !important;
-    width: 74mm !important;
-    max-width: 74mm !important;
-    margin: 0 auto !important;
+    width: calc(80mm - var(--fis-sol, 3mm) - var(--fis-sag, 8mm)) !important;
+    max-width: calc(80mm - var(--fis-sol, 3mm) - var(--fis-sag, 8mm)) !important;
+    margin: 0 0 0 var(--fis-sol, 3mm) !important;
     padding: 1mm 1mm 2mm 1mm !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
     font-size: 15px !important;
@@ -79,8 +79,8 @@
   }
   body.printing-summary .sum-sheet {
     box-shadow: none !important;
-    margin: 0 auto !important;
-    width: 74mm !important;
+    margin: 0 0 0 var(--fis-sol, 3mm) !important;
+    width: calc(80mm - var(--fis-sol, 3mm) - var(--fis-sag, 8mm)) !important;
     color: #000000 !important;
   }
 

@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Printer, X } from 'lucide-react';
 import { formatCurrency, formatNumber, num, buildSummary, BANKA_ADLARI } from '../utils/calculations';
+import { getPrintMargins, setPrintMargins, VARSAYILAN_BOSLUK } from '../utils/printMargins';
 
 /**
  * ÖZET ADİSYON (80mm). Sıra:
@@ -44,6 +45,7 @@ const Head = ({ children, mt = 5 }) => <div style={{ ...headStyle, marginTop: mt
 const Rule = ({ heavy }) => <div style={{ borderTop: `${heavy ? 1.5 : 1}px solid ${INK}`, margin: '3px 0' }} />;
 
 export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
+  const [bosluk, setBosluk] = useState(getPrintMargins);
   if (!open || !data || !metrics || typeof document === 'undefined') return null;
 
   const markalar = data.kanalCiro?.markalar || [];
@@ -104,6 +106,8 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
   const kasaFarki = metrics.kasaFarki || 0;
   const nakitGider = metrics.nakitHarcamalar ?? metrics.toplamHarcamalar;
 
+  const boslukDegis = (alan, deger) => setBosluk(setPrintMargins({ ...bosluk, [alan]: deger }));
+
   const handlePrint = () => {
     document.body.classList.add('printing-summary');
     const cleanup = () => {
@@ -116,9 +120,9 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
 
   return createPortal(
     <div className="sum-overlay" style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,23,42,0.65)', overflow: 'auto', padding: '16px 0' }}>
-      <div className="sum-toolbar" style={{ width: '78mm', margin: '0 auto 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+      <div className="sum-toolbar" style={{ width: '90mm', margin: '0 auto 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
         <span style={{ fontSize: 13, fontWeight: 700 }}>Önizleme</span>
-        <div style={{ display: 'flex', gap: 8 }}>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
           <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#d97706', color: '#fff', border: 0, borderRadius: 10, padding: '7px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
             <Printer size={15} /> Yazdır
           </button>
@@ -128,9 +132,35 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
         </div>
       </div>
 
+      <div className="sum-toolbar" style={{ width: '90mm', margin: '0 auto 10px', display: 'flex', alignItems: 'center', gap: 10, color: '#fff', fontSize: 12, flexWrap: 'wrap' }}>
+        <span style={{ fontWeight: 700 }}>Yazıcı boşluğu (mm):</span>
+        {[['sol', 'Sol'], ['sag', 'Sağ']].map(([alan, ad]) => (
+          <label key={alan} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+            {ad}
+            <input
+              type="number"
+              min="0"
+              max="15"
+              step="0.5"
+              value={bosluk[alan]}
+              onChange={(e) => boslukDegis(alan, e.target.value)}
+              style={{ width: 54, borderRadius: 6, border: 0, padding: '3px 5px', fontSize: 12, color: '#0f172a' }}
+            />
+          </label>
+        ))}
+        <button
+          type="button"
+          onClick={() => setBosluk(setPrintMargins(VARSAYILAN_BOSLUK))}
+          style={{ background: 'transparent', color: '#cbd5e1', border: '1px solid #64748b', borderRadius: 6, padding: '2px 8px', fontSize: 11, cursor: 'pointer' }}
+        >
+          Sıfırla
+        </button>
+        <span style={{ color: '#cbd5e1', fontSize: 11 }}>Sağdan kesiliyorsa Sağ'ı artır. Tam adisyonda da geçerli.</span>
+      </div>
+
       <div
         className="sum-sheet"
-        style={{ width: '74mm', margin: '0 auto', background: '#fff', color: INK, padding: '2mm 2mm 3mm', boxSizing: 'border-box', boxShadow: '0 10px 40px rgba(0,0,0,0.35)', fontFamily: '"Segoe UI", Arial, sans-serif' }}
+        style={{ width: 'calc(80mm - var(--fis-sol, 3mm) - var(--fis-sag, 8mm))', margin: '0 auto', background: '#fff', color: INK, padding: '2mm 2mm 3mm', boxSizing: 'border-box', boxShadow: '0 10px 40px rgba(0,0,0,0.35)', fontFamily: '"Segoe UI", Arial, sans-serif' }}
       >
         {/* Başlık */}
         <div style={{ textAlign: 'center', paddingBottom: 5, borderBottom: `2px solid ${INK}` }}>
@@ -311,7 +341,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
           <Rule heavy />
           <Row bold l="KASA SONUCU:" v={tl(metrics.hesaplananNakit)} />
           <Row bold l="SAYIM (fiziki):" v={tl(metrics.fizikiSayim)} />
-          <Row bold l="Fark (sayım − kasa):" v={farkText(kasaFarki)} />
+          <Row bold l="Kasa farkı:" v={farkText(kasaFarki)} />
           <Rule />
           <Row l="Yarına devir:" v={tl(metrics.fizikiSayim)} />
         </Sec>

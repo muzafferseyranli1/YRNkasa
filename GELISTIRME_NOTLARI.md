@@ -67,7 +67,7 @@ npm run dev:all   # arayüz :5173, API :3000   (ya da: npm run build && npm star
 - Taslakta "Harcamalar" iki kez geçiyordu; ikincisi yazım hatası sayıldı (Harcamalar listesi + toplamları tek bölüm).
 - Özet bölümünde Salon altında "N kişi · ort." satırı (salon cirosu ÷ kanal tablosundaki Salon kişi sayısı); kişi girilmemişse satır çıkmaz. Aynı satır 80mm tam adisyonda, A4 Salon kartında ve ekrandaki Toplam Satış kartında ("↳ Kişi") da var (`buildSummary` → `cur.kisi`, `ort.kisiBasi`).
 - Paket kişi sayısı otomatik: paket sipariş sayısı × `PAKET_KISI_CARPANI` (1,5), küsurat yukarı yuvarlanır (`paketKisiHesapla`, toplam siparişten tek seferde; 63 sipariş → 95). Paket kişi başı ort. = paket cirosu ÷ paket kişi. Konsolide kişi = salon kişi + paket kişi; konsolide "Ortalama Kişi" = toplam satış ÷ konsolide kişi (salon kişi girilmemişse gösterilmez). Çarpanı değiştirmek için sadece `calculations.js` içindeki sabit. Özet adisyon, tam fiş, A4 (Paket + Ortalama Fiş kartları) ve ekran kartında görünür.
-- Baskı genişliği: yazıcı kenarları kestiği için fiş içeriği 74mm (78mm'den her yandan 2mm dar; `index.css` `.thermal-receipt-container` ve `.sum-sheet`, önizleme de 74mm). Hâlâ kesilirse yalnızca bu iki değeri düşür.
+- Baskı boşlukları ayarlanabilir: Özet Adisyon önizlemesinde "Yazıcı boşluğu (mm)" Sol/Sağ alanları (varsayılan sol 3, sağ 8 → içerik 69mm). Değer bu tarayıcıda `localStorage`'da saklanır (`src/utils/printMargins.js`, CSS değişkenleri `--fis-sol`/`--fis-sag`), 80mm tam adisyonda da geçerlidir. Yazıcı sağdan keserse Sağ'ı artır. Gerçek yazıcıda ilk denemede ayarlanmalı.
 - Tam adisyon (`ThermalReceipt`) ve A4 ayrı kalır. Dolu bir günde fiş uzun çıkar (~60 cm); gerçek yazıcıda denenmedi.
 
 ## Dikkat: canlıda veri kaybı
