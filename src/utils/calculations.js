@@ -103,6 +103,10 @@ export const shiftDate = (dateStr, days) => {
  * Özet kartları (A4 raporu ve 80mm fiş ortak kullanır): bu gün ve geçen haftanın aynı günü için
  * toplam / salon / paket satış, fiş sayıları ve ortalamalar.
  */
+// Paket serviste sipariş başına varsayılan kişi sayısı (küsurat yukarı yuvarlanır)
+export const PAKET_KISI_CARPANI = 1.5;
+export const paketKisiHesapla = (paketSiparis) => Math.ceil(Math.round(num(paketSiparis) * PAKET_KISI_CARPANI * 1000) / 1000);
+
 export const buildSummary = (metrics, prevMetrics) => {
   const kanal = metrics?.kanal || {};
   const salonCiro = kanal.satirToplamlari?.restoran?.ciro || 0;
@@ -118,7 +122,9 @@ export const buildSummary = (metrics, prevMetrics) => {
     fis: salonFis + paketFis,
     // Salon kişi sayısı (bilgi): yalnızca kişi başı ortalama için kullanılır
     kisi: kanal.satirToplamlari?.restoran?.kisi ?? kanal.kisiToplam ?? 0,
+    paketKisi: paketKisiHesapla(paketFis),
   };
+  cur.kisiToplam = cur.kisi + cur.paketKisi; // konsolide kişi (salon + paket)
   const pk = prevMetrics?.kanal;
   const pSalon = pk?.satirToplamlari?.restoran?.ciro || 0;
   const old = {
@@ -130,13 +136,15 @@ export const buildSummary = (metrics, prevMetrics) => {
     kisi: pk?.satirToplamlari?.restoran?.kisi ?? pk?.kisiToplam ?? 0,
   };
   old.fis = old.salonFis + old.paketFis;
+  old.paketKisi = paketKisiHesapla(old.paketFis);
+  old.kisiToplam = old.kisi + old.paketKisi;
   const avg = (c, f) => (f > 0 ? c / f : 0);
   return {
     cur,
     old,
     hasPrev: !!prevMetrics && old.toplam > 0,
-    ort: { toplam: avg(cur.toplam, cur.fis), salon: avg(cur.salon, cur.salonFis), paket: avg(cur.paket, cur.paketFis), kisiBasi: avg(cur.salon, cur.kisi) },
-    ortPrev: { toplam: avg(old.toplam, old.fis), salon: avg(old.salon, old.salonFis), paket: avg(old.paket, old.paketFis), kisiBasi: avg(old.salon, old.kisi) },
+    ort: { toplam: avg(cur.toplam, cur.fis), salon: avg(cur.salon, cur.salonFis), paket: avg(cur.paket, cur.paketFis), kisiBasi: avg(cur.salon, cur.kisi), paketKisiBasi: avg(cur.paket, cur.paketKisi), konsolideKisiBasi: avg(cur.toplam, cur.kisiToplam) },
+    ortPrev: { toplam: avg(old.toplam, old.fis), salon: avg(old.salon, old.salonFis), paket: avg(old.paket, old.paketFis), kisiBasi: avg(old.salon, old.kisi), paketKisiBasi: avg(old.paket, old.paketKisi), konsolideKisiBasi: avg(old.toplam, old.kisiToplam) },
   };
 };
 

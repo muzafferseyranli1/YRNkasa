@@ -9,7 +9,7 @@ import {
   AlertCircle,
   AlertTriangle,
 } from 'lucide-react';
-import { formatCurrency, formatNumber } from '../utils/calculations';
+import { formatCurrency, formatNumber, buildSummary } from '../utils/calculations';
 
 export default function SummaryCards({ metrics }) {
   if (!metrics) return null;
@@ -42,11 +42,14 @@ export default function SummaryCards({ metrics }) {
   const salonKisi = kanal?.satirToplamlari?.restoran?.kisi ?? kanal?.kisiToplam ?? 0;
   const paketCiro = (kanal?.ciroToplam || 0) - salonCiro;
   const paketFis = kanal?.paketToplam || 0;
+  const { cur: sm, ort: so } = buildSummary(metrics, null);
   const kirilim = [
     { ad: 'Toplam', satis: salonCiro + paketCiro, fis: salonFis + paketFis, bold: true },
+    ...(salonKisi > 0 ? [{ ad: '↳ Kişi (salon+paket*)', satis: null, fis: sm.kisiToplam, ort: so.konsolideKisiBasi, sub: true }] : []),
     { ad: 'Salon', satis: salonCiro, fis: salonFis },
     ...(salonKisi > 0 ? [{ ad: '↳ Kişi', satis: null, fis: salonKisi, ort: salonCiro / salonKisi, sub: true }] : []),
     { ad: 'Paket', satis: paketCiro, fis: paketFis },
+    ...(sm.paketKisi > 0 ? [{ ad: '↳ Kişi* (sip.×1,5)', satis: null, fis: sm.paketKisi, ort: so.paketKisiBasi, sub: true }] : []),
   ];
 
   return (

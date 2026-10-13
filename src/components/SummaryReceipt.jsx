@@ -156,8 +156,16 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics, pre
           {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · kişi başı ort.`} v={tl(ort.kisiBasi)} small indent={1} />}
           <Row l="Paket:" v={`${tl(cur.paket)}${hasPrev ? dText(delta(cur.paket, old.paket)) : ''}`} />
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent={1} />
+          {cur.paketKisi > 0 && <Row l={`${formatNumber(cur.paketKisi)} kişi* · kişi başı ort.`} v={tl(ort.paketKisiBasi)} small indent={1} />}
           <Row l="Fiş Sayısı:" v={`${formatNumber(cur.fis)}${hasPrev ? dText(delta(cur.fis, old.fis)) : ''}`} />
           <Row l="Ortalama Fiş:" v={`${tl(ort.toplam)}${hasPrev ? dText(delta(ort.toplam, ortPrev.toplam)) : ''}`} />
+          {cur.kisi > 0 && (
+            <>
+              <Row l="Konsolide kişi başı ort.:" v={tl(ort.konsolideKisiBasi)} />
+              <Row l={`${formatNumber(cur.kisiToplam)} kişi (salon ${formatNumber(cur.kisi)} + paket ${formatNumber(cur.paketKisi)}*)`} v="" small indent={1} />
+            </>
+          )}
+          {cur.paketKisi > 0 && <div style={{ fontSize: 9.5, fontWeight: 700 }}>* Paket kişi = sipariş × 1,5 (yukarı yuvarlanır)</div>}
           <div style={{ fontSize: 10, fontWeight: 700, marginTop: 2 }}>
             {hasPrev ? `Kıyas: geçen hf. ${shortDay(prevDate)} → ${tl(old.toplam)} · ${formatNumber(old.fis)} fiş` : 'Geçen hafta aynı gün kaydı yok'}
           </div>

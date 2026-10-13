@@ -302,9 +302,9 @@ export default function A4Report({ open, onClose, date, data, metrics, prev = { 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 6 }}>
           <Kpi label="Toplam Satış" value={tl(cur.toplam)} accent={C.brand} delta={hasPrev ? pct(cur.toplam, old.toplam) : undefined} prevText={hasPrev ? `${prevTag}: ${tl(old.toplam)}` : prevTag} />
           <Kpi label="Salon" value={tl(cur.salon)} accent={C.indigo} sub={<>{formatNumber(cur.salonFis)} fiş · ort. {tl(ortSalon)}{cur.kisi > 0 && <><br />{formatNumber(cur.kisi)} kişi · kişi başı {tl(ort.kisiBasi)}</>}</>} delta={hasPrev ? pct(cur.salon, old.salon) : undefined} prevText={hasPrev ? `${prevTag}: ${tl(old.salon)}` : prevTag} />
-          <Kpi label="Paket" value={tl(cur.paket)} accent={C.sky} sub={`${formatNumber(cur.paketFis)} fiş · ort. ${tl(ortPaket)}`} delta={hasPrev ? pct(cur.paket, old.paket) : undefined} prevText={hasPrev ? `${prevTag}: ${tl(old.paket)}` : prevTag} />
+          <Kpi label="Paket" value={tl(cur.paket)} accent={C.sky} sub={<>{formatNumber(cur.paketFis)} fiş · ort. {tl(ortPaket)}{cur.paketKisi > 0 && <><br />{formatNumber(cur.paketKisi)} kişi* · kişi başı {tl(ort.paketKisiBasi)}</>}</>} delta={hasPrev ? pct(cur.paket, old.paket) : undefined} prevText={hasPrev ? `${prevTag}: ${tl(old.paket)}` : prevTag} />
           <Kpi label="Fiş Sayısı" value={formatNumber(cur.fis)} accent={C.amber} sub={`Salon ${formatNumber(cur.salonFis)} · Paket ${formatNumber(cur.paketFis)}`} delta={hasPrev ? pct(cur.fis, old.fis) : undefined} prevText={hasPrev ? `${prevTag}: ${formatNumber(old.fis)}` : prevTag} />
-          <Kpi label="Ortalama Fiş" value={tl(ortFis)} accent={C.emerald} sub="satış ÷ fiş" delta={hasPrev ? pct(ortFis, ortFisPrev) : undefined} prevText={hasPrev ? `${prevTag}: ${tl(ortFisPrev)}` : prevTag} />
+          <Kpi label="Ortalama Fiş" value={tl(ortFis)} accent={C.emerald} sub={<>satış ÷ fiş{cur.kisi > 0 && <><br />{formatNumber(cur.kisiToplam)} kişi · kişi başı {tl(ort.konsolideKisiBasi)}</>}</>} delta={hasPrev ? pct(ortFis, ortFisPrev) : undefined} prevText={hasPrev ? `${prevTag}: ${tl(ortFisPrev)}` : prevTag} />
         </div>
 
         {/* 2-3. Devir ve ekstra nakit */}
