@@ -44,8 +44,8 @@
 
   .thermal-receipt-container {
     display: block !important;
-    width: 78mm !important;
-    max-width: 78mm !important;
+    width: 74mm !important;
+    max-width: 74mm !important;
     margin: 0 auto !important;
     padding: 1mm 1mm 2mm 1mm !important;
     font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif !important;
@@ -80,7 +80,7 @@
   body.printing-summary .sum-sheet {
     box-shadow: none !important;
     margin: 0 auto !important;
-    width: 78mm !important;
+    width: 74mm !important;
     color: #000000 !important;
   }
 

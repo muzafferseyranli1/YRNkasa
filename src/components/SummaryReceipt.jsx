@@ -116,7 +116,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
 
   return createPortal(
     <div className="sum-overlay" style={{ position: 'fixed', inset: 0, zIndex: 60, background: 'rgba(15,23,42,0.65)', overflow: 'auto', padding: '16px 0' }}>
-      <div className="sum-toolbar" style={{ width: '82mm', margin: '0 auto 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
+      <div className="sum-toolbar" style={{ width: '78mm', margin: '0 auto 10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', color: '#fff' }}>
         <span style={{ fontSize: 13, fontWeight: 700 }}>Önizleme</span>
         <div style={{ display: 'flex', gap: 8 }}>
           <button onClick={handlePrint} style={{ display: 'flex', alignItems: 'center', gap: 6, background: '#d97706', color: '#fff', border: 0, borderRadius: 10, padding: '7px 12px', fontWeight: 800, fontSize: 13, cursor: 'pointer' }}>
@@ -130,7 +130,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
 
       <div
         className="sum-sheet"
-        style={{ width: '78mm', margin: '0 auto', background: '#fff', color: INK, padding: '2mm 2mm 3mm', boxSizing: 'border-box', boxShadow: '0 10px 40px rgba(0,0,0,0.35)', fontFamily: '"Segoe UI", Arial, sans-serif' }}
+        style={{ width: '74mm', margin: '0 auto', background: '#fff', color: INK, padding: '2mm 2mm 3mm', boxSizing: 'border-box', boxShadow: '0 10px 40px rgba(0,0,0,0.35)', fontFamily: '"Segoe UI", Arial, sans-serif' }}
       >
         {/* Başlık */}
         <div style={{ textAlign: 'center', paddingBottom: 5, borderBottom: `2px solid ${INK}` }}>
