@@ -129,7 +129,6 @@ export default function ThermalReceipt({ date, data, metrics, prev = { exists: f
               <Row l={`${formatNumber(cur.kisiToplam)} kişi (salon ${formatNumber(cur.kisi)} + paket ${formatNumber(cur.paketKisi)}*)`} v="" small indent />
             </>
           )}
-          {cur.paketKisi > 0 && <div className="text-[10px] font-bold">* Paket kişi = sipariş × 1,5 (yukarı yuvarlanır)</div>}
         </div>
         <div className="mt-1 text-[11px] font-bold">
           {hasPrev
@@ -382,6 +381,8 @@ export default function ThermalReceipt({ date, data, metrics, prev = { exists: f
         </div>
         {data.notlar && <div className="mt-1 text-[11px] font-bold">Not: {String(data.notlar).slice(0, 160)}</div>}
       </Sec>
+
+      {cur.paketKisi > 0 && <div className="pt-1 text-[10px] font-bold">* Paket kişi = sipariş × 1,5 (yukarı yuvarlanır)</div>}
 
       {/* İMZA ALANI */}
       <div className="pt-2 pb-1 text-center text-sm font-bold">

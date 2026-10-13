@@ -157,7 +157,6 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
               <Row l={`${formatNumber(cur.kisiToplam)} kişi (salon ${formatNumber(cur.kisi)} + paket ${formatNumber(cur.paketKisi)}*)`} v="" small indent={1} />
             </>
           )}
-          {cur.paketKisi > 0 && <div style={{ fontSize: 9.5, fontWeight: 700 }}>* Paket kişi = sipariş × 1,5 (yukarı yuvarlanır)</div>}
         </Sec>
 
         {/* 1. Satış Kanalları Dökümü */}
@@ -314,6 +313,10 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
           <Rule />
           <Row l="Yarına devir:" v={tl(metrics.fizikiSayim)} />
         </Sec>
+
+        {cur.paketKisi > 0 && (
+          <div style={{ fontSize: 9.5, fontWeight: 700, paddingTop: 4 }}>* Paket kişi = sipariş × 1,5 (yukarı yuvarlanır)</div>
+        )}
 
         <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 900, paddingTop: 5, textTransform: 'uppercase', letterSpacing: 1 }}>
           *** ÖZET GÜN SONU ***
