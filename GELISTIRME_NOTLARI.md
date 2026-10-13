@@ -65,6 +65,7 @@ npm run dev:all   # arayüz :5173, API :3000   (ya da: npm run build && npm star
 - Sıra (kullanıcının taslağı): Özet (satış/salon/paket/fiş/ortalama + geçen hafta %) → Satış Kanalları Dökümü (kanal → marka satırları "ciro / fiş sayısı", sonda marka bazlı Toplam) → Ödeme Tipleri (Nakit: toplam/denge/suitable + Z nakit; Kredi Kartı: toplam/denge/suitable + bahşiş + Z KK + YKB/Ziraat gün sonu + fark; online KK ve cari varsa; yemek çekleri: sistem/gün sonu/fark; platform kanalları: ciro/online + online alacak toplamı) → Ara Toplam (devir + elden nakit + satıştan gelen nakit) → Harcamalar → Adisyon (kurye) ödemeleri → Tip ödemeleri → Kasa Sonucu (sayım, fark, yarına devir).
 - Fark işareti: gün sonu − sistem (pozitif ARTI, negatif EKSİ). Kredi kartı sistemi = satış KK + kartla çekilen bahşiş (banka gün sonu bahşişi de içerir).
 - Taslakta "Harcamalar" iki kez geçiyordu; ikincisi yazım hatası sayıldı (Harcamalar listesi + toplamları tek bölüm).
+- Özet bölümünde Salon altında "N kişi · kişi başı ort." satırı (salon cirosu ÷ kanal tablosundaki Salon kişi sayısı); kişi girilmemişse satır çıkmaz. Aynı satır 80mm tam adisyonda, A4 Salon kartında ve ekrandaki Toplam Satış kartında ("↳ Kişi") da var (`buildSummary` → `cur.kisi`, `ort.kisiBasi`).
 - Tam adisyon (`ThermalReceipt`) ve A4 ayrı kalır. Dolu bir günde fiş uzun çıkar (~60 cm); gerçek yazıcıda denenmedi.
 
 ## Dikkat: canlıda veri kaybı

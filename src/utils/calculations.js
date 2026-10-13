@@ -116,6 +116,8 @@ export const buildSummary = (metrics, prevMetrics) => {
     salonFis,
     paketFis,
     fis: salonFis + paketFis,
+    // Salon kişi sayısı (bilgi): yalnızca kişi başı ortalama için kullanılır
+    kisi: kanal.satirToplamlari?.restoran?.kisi ?? kanal.kisiToplam ?? 0,
   };
   const pk = prevMetrics?.kanal;
   const pSalon = pk?.satirToplamlari?.restoran?.ciro || 0;
@@ -125,6 +127,7 @@ export const buildSummary = (metrics, prevMetrics) => {
     paket: (pk?.ciroToplam || 0) - pSalon,
     salonFis: pk?.salonFisToplam || 0,
     paketFis: pk?.paketToplam || 0,
+    kisi: pk?.satirToplamlari?.restoran?.kisi ?? pk?.kisiToplam ?? 0,
   };
   old.fis = old.salonFis + old.paketFis;
   const avg = (c, f) => (f > 0 ? c / f : 0);
@@ -132,8 +135,8 @@ export const buildSummary = (metrics, prevMetrics) => {
     cur,
     old,
     hasPrev: !!prevMetrics && old.toplam > 0,
-    ort: { toplam: avg(cur.toplam, cur.fis), salon: avg(cur.salon, cur.salonFis), paket: avg(cur.paket, cur.paketFis) },
-    ortPrev: { toplam: avg(old.toplam, old.fis), salon: avg(old.salon, old.salonFis), paket: avg(old.paket, old.paketFis) },
+    ort: { toplam: avg(cur.toplam, cur.fis), salon: avg(cur.salon, cur.salonFis), paket: avg(cur.paket, cur.paketFis), kisiBasi: avg(cur.salon, cur.kisi) },
+    ortPrev: { toplam: avg(old.toplam, old.fis), salon: avg(old.salon, old.salonFis), paket: avg(old.paket, old.paketFis), kisiBasi: avg(old.salon, old.kisi) },
   };
 };
 

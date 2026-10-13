@@ -39,11 +39,13 @@ export default function SummaryCards({ metrics }) {
 
   const salonCiro = kanal?.satirToplamlari?.restoran?.ciro || 0;
   const salonFis = kanal?.salonFisToplam || 0;
+  const salonKisi = kanal?.satirToplamlari?.restoran?.kisi ?? kanal?.kisiToplam ?? 0;
   const paketCiro = (kanal?.ciroToplam || 0) - salonCiro;
   const paketFis = kanal?.paketToplam || 0;
   const kirilim = [
     { ad: 'Toplam', satis: salonCiro + paketCiro, fis: salonFis + paketFis, bold: true },
     { ad: 'Salon', satis: salonCiro, fis: salonFis },
+    ...(salonKisi > 0 ? [{ ad: '↳ Kişi', satis: null, fis: salonKisi, ort: salonCiro / salonKisi, sub: true }] : []),
     { ad: 'Paket', satis: paketCiro, fis: paketFis },
   ];
 
@@ -76,11 +78,11 @@ export default function SummaryCards({ metrics }) {
               <tbody>
                 {kirilim.map((r) => (
                   <tr key={r.ad} className="border-t border-slate-100">
-                    <td className={`py-0.5 ${r.bold ? 'font-extrabold text-slate-900' : 'font-bold text-slate-700'}`}>{r.ad}</td>
-                    <td className="py-0.5 px-2 text-right font-bold text-slate-800 whitespace-nowrap">{formatCurrency(r.satis)}</td>
+                    <td className={`py-0.5 ${r.bold ? 'font-extrabold text-slate-900' : r.sub ? 'pl-3 text-[11px] font-semibold text-slate-500' : 'font-bold text-slate-700'}`}>{r.ad}</td>
+                    <td className="py-0.5 px-2 text-right font-bold text-slate-800 whitespace-nowrap">{r.satis === null ? '' : formatCurrency(r.satis)}</td>
                     <td className="py-0.5 px-2 text-right font-bold text-slate-800">{formatNumber(r.fis)}</td>
                     <td className="py-0.5 pl-2 text-right font-bold text-slate-800 whitespace-nowrap">
-                      {formatCurrency(r.fis > 0 ? r.satis / r.fis : 0)}
+                      {formatCurrency(r.ort !== undefined ? r.ort : r.fis > 0 ? r.satis / r.fis : 0)}
                     </td>
                   </tr>
                 ))}

@@ -117,6 +117,7 @@ export default function ThermalReceipt({ date, data, metrics, prev = { exists: f
           <Row l="TOPLAM SATIŞ:" v={`${formatCurrency(cur.toplam)}${hasPrev ? dText(delta(cur.toplam, old.toplam)) : ''}`} bold />
           <Row l="Salon:" v={`${formatCurrency(cur.salon)}${hasPrev ? dText(delta(cur.salon, old.salon)) : ''}`} />
           <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={formatCurrency(ort.salon)} small indent />
+          {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · kişi başı ort.`} v={formatCurrency(ort.kisiBasi)} small indent />}
           <Row l="Paket:" v={`${formatCurrency(cur.paket)}${hasPrev ? dText(delta(cur.paket, old.paket)) : ''}`} />
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={formatCurrency(ort.paket)} small indent />
           <Row l="Fiş Sayısı:" v={`${formatNumber(cur.fis)}${hasPrev ? dText(delta(cur.fis, old.fis)) : ''}`} />

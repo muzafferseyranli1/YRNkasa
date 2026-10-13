@@ -153,6 +153,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics, pre
           <Row l="TOPLAM SATIŞ:" v={`${tl(cur.toplam)}${hasPrev ? dText(delta(cur.toplam, old.toplam)) : ''}`} bold />
           <Row l="Salon:" v={`${tl(cur.salon)}${hasPrev ? dText(delta(cur.salon, old.salon)) : ''}`} />
           <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={tl(ort.salon)} small indent={1} />
+          {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · kişi başı ort.`} v={tl(ort.kisiBasi)} small indent={1} />}
           <Row l="Paket:" v={`${tl(cur.paket)}${hasPrev ? dText(delta(cur.paket, old.paket)) : ''}`} />
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent={1} />
           <Row l="Fiş Sayısı:" v={`${formatNumber(cur.fis)}${hasPrev ? dText(delta(cur.fis, old.fis)) : ''}`} />
