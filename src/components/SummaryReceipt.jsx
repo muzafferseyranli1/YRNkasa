@@ -150,6 +150,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent={1} />
           {cur.paketKisi > 0 && <Row l={`${formatNumber(cur.paketKisi)} kişi* · ort.`} v={tl(ort.paketKisiBasi)} small indent={1} />}
           <Row l="Fiş Sayısı:" v={formatNumber(cur.fis)} />
+          <div style={{ borderTop: `1px dashed ${INK}`, margin: '3px 0' }} />
           <Row l="Ortalama Fiş:" v={tl(ort.toplam)} />
           {cur.kisi > 0 && (
             <>
