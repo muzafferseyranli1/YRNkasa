@@ -145,15 +145,15 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
           <Row l="TOPLAM SATIŞ:" v={tl(cur.toplam)} bold />
           <Row l="Salon:" v={tl(cur.salon)} />
           <Row l={`${formatNumber(cur.salonFis)} fiş · ort.`} v={tl(ort.salon)} small indent={1} />
-          {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · kişi başı ort.`} v={tl(ort.kisiBasi)} small indent={1} />}
+          {cur.kisi > 0 && <Row l={`${formatNumber(cur.kisi)} kişi · ort.`} v={tl(ort.kisiBasi)} small indent={1} />}
           <Row l="Paket:" v={tl(cur.paket)} />
           <Row l={`${formatNumber(cur.paketFis)} fiş · ort.`} v={tl(ort.paket)} small indent={1} />
-          {cur.paketKisi > 0 && <Row l={`${formatNumber(cur.paketKisi)} kişi* · kişi başı ort.`} v={tl(ort.paketKisiBasi)} small indent={1} />}
+          {cur.paketKisi > 0 && <Row l={`${formatNumber(cur.paketKisi)} kişi* · ort.`} v={tl(ort.paketKisiBasi)} small indent={1} />}
           <Row l="Fiş Sayısı:" v={formatNumber(cur.fis)} />
           <Row l="Ortalama Fiş:" v={tl(ort.toplam)} />
           {cur.kisi > 0 && (
             <>
-              <Row l="Konsolide kişi başı ort.:" v={tl(ort.konsolideKisiBasi)} />
+              <Row l="Ortalama Kişi:" v={tl(ort.konsolideKisiBasi)} />
               <Row l={`${formatNumber(cur.kisiToplam)} kişi (salon ${formatNumber(cur.kisi)} + paket ${formatNumber(cur.paketKisi)}*)`} v="" small indent={1} />
             </>
           )}
