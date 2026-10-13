@@ -58,9 +58,9 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
   const { cur, ort } = buildSummary(metrics, null);
 
   // ---- Satış kanalları: kanal → marka (ciro / fiş) ----
-  const hucre = (r, mk) => ({ ciro: num(r.ciro?.[mk.id]), adet: num(r.adet?.[mk.id]) });
+  const hucre = (r, mk) => ({ ciro: num(r.ciro?.[mk.id]), adet: num(r.adet?.[mk.id]), online: num(r.online?.[mk.id]) });
   const kanalRows = satirlar
-    .map((r) => ({ r, brands: markalar.map((mk) => ({ mk, ...hucre(r, mk) })).filter((b) => b.ciro !== 0 || b.adet !== 0) }))
+    .map((r) => ({ r, brands: markalar.map((mk) => ({ mk, ...hucre(r, mk) })).filter((b) => b.ciro !== 0 || b.adet !== 0 || b.online !== 0) }))
     .filter((x) => x.brands.length > 0);
   const markaFis = (mk) => (kanal.markaSalonFis?.[mk.id] || 0) + (kanal.markaPaket?.[mk.id] || 0);
   const toplamFis = (kanal.salonFisToplam || 0) + (kanal.paketToplam || 0);
@@ -80,10 +80,6 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
   const kkFark = bankaGunSonu - kkSistem;
 
   const yemek = Object.entries(metrics.yemekKartlari || {}).filter(([, y]) => num(y.hesaplanan) !== 0 || num(y.fiziki) !== 0);
-  const platformlar = satirlar
-    .filter((r) => r.panel)
-    .map((r) => ({ name: r.name, ...(kanal.satirToplamlari?.[r.id] || {}) }))
-    .filter((p) => (p.ciro || 0) !== 0 || (p.online || 0) !== 0);
 
   // ---- Harcama / kurye / bahşiş ----
   const harcamalar = (data.harcamalar || []).filter((h) => num(h.tutar) > 0);
@@ -171,17 +167,24 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
               {kanalRows.map(({ r, brands }, i) => (
                 <div key={r.id}>
                   <Head mt={i === 0 ? 0 : 5}>{r.name}</Head>
-                  {brands.map(({ mk, ciro, adet }) => (
-                    <Row key={mk.id} indent={1} l={`${mk.name} :`} v={`${tl(ciro)} / ${formatNumber(adet)}`} />
+                  {brands.map(({ mk, ciro, adet, online }) => (
+                    <div key={mk.id}>
+                      <Row indent={1} l={`${mk.name} :`} v={`${tl(ciro)} / ${formatNumber(adet)}`} />
+                      {online !== 0 && <Row indent={2} l="Online:" v={tl(online)} />}
+                    </div>
                   ))}
                 </div>
               ))}
               <Rule heavy />
               <Head mt={0}>Toplam</Head>
               {markalar.map((mk) => (
-                <Row key={mk.id} indent={1} l={`${mk.name} :`} v={`${tl(kanal.markaCiro?.[mk.id])} / ${formatNumber(markaFis(mk))}`} />
+                <div key={mk.id}>
+                  <Row indent={1} l={`${mk.name} :`} v={`${tl(kanal.markaCiro?.[mk.id])} / ${formatNumber(markaFis(mk))}`} />
+                  {num(kanal.markaOnline?.[mk.id]) !== 0 && <Row indent={2} l="Online:" v={tl(kanal.markaOnline[mk.id])} />}
+                </div>
               ))}
               <Row indent={1} bold l="Toplam :" v={`${tl(kanal.ciroToplam)} / ${formatNumber(toplamFis)}`} />
+              {num(kanal.onlineToplam) !== 0 && <Row indent={2} bold l="Online alacak toplam:" v={tl(kanal.onlineToplam)} />}
               <div style={{ fontSize: 9.5, fontWeight: 700, marginTop: 2 }}>
                 Format: ciro / fiş (paket kanallarında paket) sayısı
                 {(kanal.kisiToplam || 0) > 0 ? ` · Salon kişi: ${formatNumber(kanal.kisiToplam)}` : ''}
@@ -241,20 +244,6 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
               <Row bold l="Fark (gün sonu − sistem):" v={farkText(y.fark)} />
             </div>
           ))}
-
-          {platformlar.map((p) => (
-            <div key={p.name}>
-              <Head>{p.name}</Head>
-              <Row indent={1} l="Ciro:" v={tl(p.ciro)} />
-              <Row indent={1} l="Online:" v={tl(p.online)} />
-            </div>
-          ))}
-          {platformlar.length > 0 && (
-            <>
-              <Rule />
-              <Row bold l="Online alacak toplam:" v={tl(kanal.onlineToplam)} />
-            </>
-          )}
         </Sec>
 
         {/* 3. Ara toplam */}
