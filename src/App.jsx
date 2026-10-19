@@ -15,6 +15,7 @@ import BankaGunSonuSection from './components/BankaGunSonuSection';
 import ThermalReceipt from './components/ThermalReceipt';
 import A4Report from './components/A4Report';
 import SummaryReceipt from './components/SummaryReceipt';
+import A5Report from './components/A5Report';
 import HistoryModal from './components/HistoryModal';
 import CourierReportsView from './components/reports/CourierReportsView';
 import TipReportsView from './components/reports/TipReportsView';
@@ -44,6 +45,7 @@ export default function App() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isA4Open, setIsA4Open] = useState(false);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isA5Open, setIsA5Open] = useState(false);
 
   // Fetch report for selected date
   const loadReport = useCallback(async (dateToLoad) => {
@@ -182,6 +184,7 @@ export default function App() {
         onPrint={handlePrint}
         onOpenA4={() => setIsA4Open(true)}
         onOpenSummary={() => setIsSummaryOpen(true)}
+        onOpenA5={() => setIsA5Open(true)}
         onOpenHistory={() => setIsHistoryOpen(true)}
         isSaving={isSaving}
         hasUnsavedChanges={hasUnsavedChanges}
@@ -301,6 +304,8 @@ export default function App() {
       )}
 
       {/* A4 Gün Sonu Rapor Sayfası */}
+      <A5Report open={isA5Open} onClose={() => setIsA5Open(false)} date={selectedDate} data={data} metrics={metrics} />
+
       <SummaryReceipt open={isSummaryOpen} onClose={() => setIsSummaryOpen(false)} date={selectedDate} data={data} metrics={metrics} />
 
       <A4Report open={isA4Open} onClose={() => setIsA4Open(false)} date={selectedDate} data={data} metrics={metrics} prev={prevWeek} />

@@ -84,6 +84,34 @@
     color: #000000 !important;
   }
 
+  /* A5 gün sonu raporu: yalnızca rapor sayfası yazdırılır */
+  body.printing-a5 {
+    width: 148mm !important;
+    background: #ffffff !important;
+  }
+  html:has(body.printing-a5) {
+    width: 148mm !important;
+  }
+  body.printing-a5 #root,
+  body.printing-a5 .thermal-receipt-container,
+  body.printing-a5 .a5-toolbar {
+    display: none !important;
+  }
+  body.printing-a5 .a5-overlay {
+    position: static !important;
+    background: #ffffff !important;
+    padding: 0 !important;
+    overflow: visible !important;
+  }
+  body.printing-a5 .a5-sheet {
+    box-shadow: none !important;
+    margin: 0 !important;
+    width: 148mm !important;
+    height: 209mm !important;
+    break-after: avoid;
+    page-break-after: avoid;
+  }
+
   /* A4 gün sonu raporu: yalnızca rapor sayfası yazdırılır */
   body.printing-a4 {
     width: 210mm !important;

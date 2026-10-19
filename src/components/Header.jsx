@@ -7,6 +7,7 @@ export default function Header({
   onSave,
   onPrint,
   onOpenA4,
+  onOpenA5,
   onOpenSummary,
   onOpenHistory,
   isSaving,
@@ -119,6 +120,15 @@ export default function Header({
             >
               <Printer className="w-4 h-4 text-indigo-800" />
               <span>A4 Rapor</span>
+            </button>
+
+            <button
+              onClick={onOpenA5}
+              className="flex items-center space-x-1.5 px-3.5 py-2 text-sm font-medium bg-violet-100 hover:bg-violet-200 text-violet-900 rounded-xl transition-colors shadow-xs"
+              title="A5 gün sonu raporu (Excel taslağına göre)"
+            >
+              <Printer className="w-4 h-4 text-violet-800" />
+              <span>A5 Rapor</span>
             </button>
 
             <button

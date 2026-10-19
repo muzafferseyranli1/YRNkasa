@@ -75,6 +75,11 @@ npm run dev:all   # arayüz :5173, API :3000   (ya da: npm run build && npm star
 - `calculations.js`: `hesaplananKrediKarti = Denge KK + Suitable KK + tipKartEklenen` (yalnızca işaretsiz satırlar). Yeni metrikler `tipKartEklenen`, `tipKartSatisaDahil`; `tipCekilenKartToplami` toplam çekilen olarak kalır (komisyon / net nakit hesapları değişmez). Eski kayıtlarda alan yok → işaretsiz sayılır (önceki davranış).
 - Özet adisyon, 80mm tam adisyon ve A4'te "+ Kartla çekilen bahşiş" artık yalnızca eklenen kısmı gösterir; satışa dahil kısım ayrı satır olarak yazılır.
 
+### 12. A5 Rapor (2026-10-19, Excel taslağına göre)
+- `src/components/A5Report.jsx` + Header'da "A5 Rapor" butonu (mor). 148x210mm, `body.printing-a5` + `@page A5` yazdırma anında enjekte (A4 ile aynı yöntem).
+- Üst tablo: kanal × (Pide ciro/sayı, Tandır ciro/sayı, Toplam ciro/sayı). Salon'da "sayı" = KİŞİ sayısı (fiş sayısı değil), diğer kanallarda paket adedi. Satır sırası Excel'deki gibi (Salon, Restoran Paket, YemekSepeti, Trendyol, Migros, Fuudy, Tıkla Gelsin, Suitable Yemek); Excel'de olmayan dolu kanallar (örn. Getir) altına eklenir. "Toplam" sütunu TÜM markaları (Kıymalı dahil) kapsar; Kıymalı ayrı sütun değildir.
+- "Masraflar" bölümü: solda Nakit (= fiziki kasa sayımı), YKB / Ziraat (Z bilgileri banka toplamları), Multinet/Ticket/Sodexho/Setcard gün sonu, platform "Cari" satırları (= kanal tablosundaki Online toplamları), Restoran Cari (boş). Sağda gruplu liste: Kurye (ad + hakediş), Masraf (nakit), Bahşiş (net nakit), Masraf (KK harici).
+
 ## Dikkat: canlıda veri kaybı
 - Bir deploy sonrası canlıdaki eski veriler kayboldu (2026-10-09). Kod/DB yolu değişmedi; en olası neden Coolify'da `/app/data` için Persistent Storage tanımlı olmaması. Coolify'da Storage → Mount Path `/app/data` olduğundan emin ol, yoksa her deploy veritabanını sıfırlar.
 
