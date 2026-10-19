@@ -70,6 +70,11 @@ npm run dev:all   # arayüz :5173, API :3000   (ya da: npm run build && npm star
 - Baskı boşlukları ayarlanabilir: Özet Adisyon önizlemesinde "Yazıcı boşluğu (mm)" Sol/Sağ alanları (varsayılan sol 3, sağ 8 → içerik 69mm). Değer bu tarayıcıda `localStorage`'da saklanır (`src/utils/printMargins.js`, CSS değişkenleri `--fis-sol`/`--fis-sag`), 80mm tam adisyonda da geçerlidir. Yazıcı sağdan keserse Sağ'ı artır. Gerçek yazıcıda ilk denemede ayarlanmalı.
 - Tam adisyon (`ThermalReceipt`) ve A4 ayrı kalır. Dolu bir günde fiş uzun çıkar (~60 cm); gerçek yazıcıda denenmedi.
 
+### 11. Bahşiş "Satışa dahil" işareti (2026-10-19)
+- `TipSection`: her bahşiş satırında "Satışa dahil" onay kutusu (`satisaDahil`). İşaretliyse bahşiş POS'ta "Tip" ürünüyle satışa girilmiştir ve kredi kartı satışının içindedir; işaretsizse (kasaya ürün girilmeden kartla çekilen) sistem kredi kartına eklenir.
+- `calculations.js`: `hesaplananKrediKarti = Denge KK + Suitable KK + tipKartEklenen` (yalnızca işaretsiz satırlar). Yeni metrikler `tipKartEklenen`, `tipKartSatisaDahil`; `tipCekilenKartToplami` toplam çekilen olarak kalır (komisyon / net nakit hesapları değişmez). Eski kayıtlarda alan yok → işaretsiz sayılır (önceki davranış).
+- Özet adisyon, 80mm tam adisyon ve A4'te "+ Kartla çekilen bahşiş" artık yalnızca eklenen kısmı gösterir; satışa dahil kısım ayrı satır olarak yazılır.
+
 ## Dikkat: canlıda veri kaybı
 - Bir deploy sonrası canlıdaki eski veriler kayboldu (2026-10-09). Kod/DB yolu değişmedi; en olası neden Coolify'da `/app/data` için Persistent Storage tanımlı olmaması. Coolify'da Storage → Mount Path `/app/data` olduğundan emin ol, yoksa her deploy veritabanını sıfırlar.
 

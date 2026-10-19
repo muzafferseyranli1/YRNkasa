@@ -107,6 +107,7 @@ export default function TipSection({ tipOdemeleri = [], onChange }) {
                 <th className="py-2 px-2 font-medium w-28 text-right">Karttan Çekilen (₺)</th>
                 <th className="py-2 px-2 font-medium w-20 text-center">Kesinti (%)</th>
                 <th className="py-2 px-2 font-medium w-24 text-right">Kesinti (₺)</th>
+                <th className="py-2 px-2 font-medium w-20 text-center" title="İşaretliyse bahşiş POS'ta Tip ürünüyle satışa girilmiştir; kredi kartı sistem toplamına tekrar eklenmez">Satışa dahil</th>
                 <th className="py-2 px-2 font-medium w-28 text-right">Ödenen Nakit (₺)</th>
                 <th className="py-2 px-2 font-medium">Açıklama / Masa No</th>
                 <th className="py-2 px-1 w-8 text-center"></th>
@@ -162,6 +163,15 @@ export default function TipSection({ tipOdemeleri = [], onChange }) {
                         -{formatCurrency(calcDeduction)}
                       </span>
                     </td>
+                    <td className="py-2 px-2 text-center">
+                      <input
+                        type="checkbox"
+                        checked={!!item.satisaDahil}
+                        onChange={(e) => handleChangeRow(item.id, 'satisaDahil', e.target.checked)}
+                        className="w-4 h-4 accent-emerald-600 cursor-pointer"
+                        title="POS'ta Tip ürünüyle satışa girildi (kredi kartı sistem toplamına tekrar eklenmez)"
+                      />
+                    </td>
                     <td className="py-2 px-2 text-right">
                       <span className="font-bold text-emerald-700 text-sm">
                         {formatCurrency(calcNetCash)}
@@ -191,6 +201,10 @@ export default function TipSection({ tipOdemeleri = [], onChange }) {
               })}
             </tbody>
           </table>
+          <p className="mt-2 text-[11px] text-slate-400">
+            <b>Satışa dahil:</b> bahşiş POS'ta "Tip" ürünü olarak tuşlandıysa işaretleyin; kredi kartı satışının içinde olduğundan
+            sistem kredi kartına tekrar eklenmez. İşaretsiz (kasaya ürün girilmeden kartla çekilen) bahşiş sistem kredi kartına eklenir.
+          </p>
         </div>
       )}
     </div>

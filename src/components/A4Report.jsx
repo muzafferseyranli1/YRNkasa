@@ -457,7 +457,8 @@ export default function A4Report({ open, onClose, date, data, metrics, prev = { 
 
           <Section title="Kredi Kartı · Sistem / Z / Banka Gün Sonu">
             <Line label="Sistem satış kredi kartı" value={tl(satisKK)} />
-            <Line label="+ Kartla çekilen bahşiş" value={tl(metrics.tipCekilenKartToplami)} />
+            <Line label="+ Kartla çekilen bahşiş" value={tl(metrics.tipKartEklenen)} />
+            {metrics.tipKartSatisaDahil > 0 && <Line label="(Satış içinde bahşiş)" value={tl(metrics.tipKartSatisaDahil)} color={C.mute} />}
             <Line label="= Sistem kredi kartı" value={tl(metrics.hesaplananKrediKarti)} bold top />
             <Line label="Z raporları (POS cihazları)" value={tl(metrics.fizikiKrediKarti)} bold />
             <Line label="Fark (Z − sistem)" value={diffLabel(metrics.krediKartiFarki)} bold tone={ok(metrics.krediKartiFarki) ? 'ok' : 'bad'} />

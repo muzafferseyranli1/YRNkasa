@@ -78,7 +78,8 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
   const zKK = cihazlar.reduce((a, d) => a + num(d.krediKarti), 0);
   const bankaToplamlari = BANKA_ADLARI.map((_, slot) => cihazlar.reduce((a, d) => a + num(d.banka?.[slot]), 0));
   const bankaGunSonu = bankaToplamlari.reduce((a, v) => a + v, 0);
-  const bahsisKart = num(metrics.tipCekilenKartToplami);
+  const bahsisKart = num(metrics.tipKartEklenen); // yalnızca satışa dahil olmayan (manuel) kart bahşişi sisteme eklenir
+  const bahsisSatista = num(metrics.tipKartSatisaDahil);
   const kkSistem = kk.toplam + bahsisKart; // banka gün sonu kartla çekilen bahşişi de içerir
   const kkFark = bankaGunSonu - kkSistem;
 
@@ -239,6 +240,7 @@ export default function SummaryReceipt({ open, onClose, date, data, metrics }) {
           <Row indent={1} l="Denge:" v={tl(kk.denge)} />
           <Row indent={1} l="Suitable:" v={tl(kk.suitable)} />
           {bahsisKart > 0 && <Row indent={1} small l="+ Karttan çekilen bahşiş:" v={tl(bahsisKart)} />}
+          {bahsisSatista > 0 && <Row indent={1} small l="(Satış içinde bahşiş):" v={tl(bahsisSatista)} />}
           <Row indent={1} small l="Z kredi kartı:" v={tl(zKK)} />
           {BANKA_ADLARI.map((ad, slot) =>
             slot < 2 || bankaToplamlari[slot] !== 0 ? <Row key={ad} indent={2} l={`${ad} gün sonu:`} v={tl(bankaToplamlari[slot])} /> : null

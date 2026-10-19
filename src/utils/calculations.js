@@ -286,6 +286,10 @@ export const calculateReportMetrics = (data) => {
   // 6. Kredi Kartı Bahşiş (Tip) & Kesintili Nakit Ödeme
   const tipList = data.tipOdemeleri || [];
   const tipCekilenKartToplami = tipList.reduce((acc, item) => acc + num(item.cekilenTip), 0);
+  // "Satışa dahil" işaretli bahşiş POS'ta Tip ürünüyle satışa girilmiştir; kredi kartı satışının içindedir,
+  // sistem kredi kartına tekrar eklenmez. İşaretsiz (manuel çekilen) bahşiş sisteme eklenir.
+  const tipKartSatisaDahil = tipList.reduce((acc, item) => acc + (item.satisaDahil ? num(item.cekilenTip) : 0), 0);
+  const tipKartEklenen = tipCekilenKartToplami - tipKartSatisaDahil;
   const tipNetNakitToplami = tipList.reduce((acc, item) => {
     if (item.netNakitTip !== undefined && item.netNakitTip !== '') return acc + num(item.netNakitTip);
     const cekilen = num(item.cekilenTip);
@@ -320,9 +324,9 @@ export const calculateReportMetrics = (data) => {
   );
   const nakitFisFarki = kesilenNakitFisi - kesilmesiGerekenNakitFisi;
 
-  // 9. Kredi Kartı Mutabakatı (Satış KK + Karttan Çekilen Bahşiş)
+  // 9. Kredi Kartı Mutabakatı (Satış KK + satışa dahil olmayan, manuel kartla çekilen bahşiş)
   const hesaplananKrediKarti =
-    num(dengePos.krediKarti) + num(suitablePos.krediKarti) + tipCekilenKartToplami;
+    num(dengePos.krediKarti) + num(suitablePos.krediKarti) + tipKartEklenen;
   const fizikiKrediKarti = posCihazlari.reduce(
     (acc, item) => acc + num(item.krediKarti),
     0
@@ -396,6 +400,8 @@ export const calculateReportMetrics = (data) => {
     kuryeOdemeleriToplami,
     kuryeToplamSiparisSayisi,
     tipCekilenKartToplami,
+    tipKartSatisaDahil,
+    tipKartEklenen,
     tipNetNakitToplami,
     tipKesintiToplami,
     toplamNakitGiris,

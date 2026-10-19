@@ -249,7 +249,8 @@ export default function ThermalReceipt({ date, data, metrics, prev = { exists: f
       <Sec title="KREDİ KARTI">
         <div className="space-y-1 text-sm font-bold">
           <Row l="Sistem satış kredi kartı:" v={formatCurrency(satisKK)} />
-          <Row l="+ Kartla çekilen bahşiş:" v={formatCurrency(metrics.tipCekilenKartToplami)} />
+          <Row l="+ Kartla çekilen bahşiş:" v={formatCurrency(metrics.tipKartEklenen)} />
+          {metrics.tipKartSatisaDahil > 0 && <Row l="(Satış içinde bahşiş):" v={formatCurrency(metrics.tipKartSatisaDahil)} small indent />}
           <Row l="= Sistem kredi kartı:" v={formatCurrency(metrics.hesaplananKrediKarti)} bold top />
           <Row l="Z raporları (POS):" v={formatCurrency(metrics.fizikiKrediKarti)} bold />
           <Row l="Fark (Z − sistem):" v={farkText(metrics.krediKartiFarki)} bold top />
