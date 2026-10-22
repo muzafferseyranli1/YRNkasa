@@ -78,6 +78,7 @@ npm run dev:all   # arayüz :5173, API :3000   (ya da: npm run build && npm star
 ### 12. A5 Rapor (2026-10-19, Excel taslağına göre)
 - `src/components/A5Report.jsx` + Header'da "A5 Rapor" butonu (mor). 148x210mm, `body.printing-a5` + `@page A5` yazdırma anında enjekte (A4 ile aynı yöntem).
 - Üst tablo: kanal × (Pide ciro/sayı, Tandır ciro/sayı, Toplam ciro/sayı). Salon'da "sayı" = KİŞİ sayısı (fiş sayısı değil), diğer kanallarda paket adedi. Satır sırası Excel'deki gibi (Salon, Restoran Paket, YemekSepeti, Trendyol, Migros, Fuudy, Tıkla Gelsin, Suitable Yemek); Excel'de olmayan dolu kanallar (örn. Getir) altına eklenir. "Toplam" sütunu TÜM markaları (Kıymalı dahil) kapsar; Kıymalı ayrı sütun değildir.
+- A5 en altında Excel tarzı iki kasa tablosu: Devir + Extra konan nakit + Satıştan gelen nakit = Ara toplam; Ara toplam − Çıkışlar (nakit masraf + kurye + net bahşiş) = Kasa sonucu | Sayım | Kasa farkı. "Masraflar" etiketi yalnızca sağdaki masraf sütununun üstünde (sol tablo başlıksız).
 - "Masraflar" bölümü: solda Nakit (= fiziki kasa sayımı), YKB / Ziraat (Z bilgileri banka toplamları), Multinet/Ticket/Sodexho/Setcard gün sonu, platform "Cari" satırları (= kanal tablosundaki Online toplamları), Restoran Cari (boş). Sağda gruplu liste: Kurye (ad + hakediş), Masraf (nakit), Bahşiş (net nakit), Masraf (KK harici).
 
 ## Dikkat: canlıda veri kaybı

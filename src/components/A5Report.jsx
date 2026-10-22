@@ -38,6 +38,11 @@ const CARI_AD = {
   suitable: 'Suitable Cari',
 };
 
+const ETIKET_H = 16; // "Masraflar" etiket satırı yüksekliği (px)
+const kasaTh = (extra = {}) => ({ border: `1px solid ${GRID}`, padding: '1.5px 3px', fontSize: 8, lineHeight: 1.2, fontWeight: 800, textAlign: 'center', background: '#f1f5f9', textTransform: 'uppercase', ...extra });
+const kasaTd = (extra = {}) => ({ border: `1px solid ${GRID}`, padding: '2px 4px', fontSize: 10, lineHeight: 1.25, fontWeight: 700, textAlign: 'right', whiteSpace: 'nowrap', ...extra });
+const opTd = () => ({ border: 'none', textAlign: 'center', fontSize: 12, fontWeight: 900, padding: 0, color: '#0f172a' });
+
 const cell = (extra = {}) => ({ border: `1px solid ${GRID}`, padding: '1.5px 4px', fontSize: 9, lineHeight: 1.25, whiteSpace: 'nowrap', ...extra });
 
 function Grup({ baslik, toplam, children }) {
@@ -139,11 +144,22 @@ export default function A5Report({ open, onClose, date, data, metrics }) {
       })
       .filter((t) => t.kart > 0 || t.v > 0);
 
-    return { markalar, b0, b1, kanalSatirlari, genel, sol, kurye, nakitMasraf, kkMasraf, tips };
+    const kasa = {
+      devir: num(data.kasaGiris?.devir),
+      extra: num(data.kasaGiris?.kasayaParaKondu),
+      satisNakit: num(data.dengePos?.nakit) + num(data.suitablePos?.nakit),
+      araToplam: metrics.toplamNakitGiris,
+      cikislar: metrics.toplamNakitCikis,
+      sonuc: metrics.hesaplananNakit,
+      sayim: metrics.fizikiSayim,
+      fark: metrics.kasaFarki || 0,
+    };
+
+    return { markalar, b0, b1, kanalSatirlari, genel, sol, kurye, nakitMasraf, kkMasraf, tips, kasa };
   }, [open, data, metrics]);
 
   if (!open || !view || typeof document === 'undefined') return null;
-  const { b0, b1, kanalSatirlari, genel, sol, kurye, nakitMasraf, kkMasraf, tips } = view;
+  const { b0, b1, kanalSatirlari, genel, sol, kurye, nakitMasraf, kkMasraf, tips, kasa } = view;
   const sum = (arr) => arr.reduce((a, x) => a + x.v, 0);
 
   const handlePrint = () => {
@@ -244,16 +260,9 @@ export default function A5Report({ open, onClose, date, data, metrics }) {
           Sayı: Salon'da kişi sayısı, diğer kanallarda paket adedi. Toplam sütunu tüm markaları (Kıymalı dahil) içerir.
         </div>
 
-        {/* Masraflar ayırıcı */}
-        <div style={{ textAlign: 'center', fontSize: 10, fontWeight: 800, margin: '7px 0 4px', display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ flex: 1, borderTop: `1.5px dashed ${GRID}` }} />
-          <span>Masraflar</span>
-          <span style={{ flex: 1, borderTop: `1.5px dashed ${GRID}` }} />
-        </div>
-
         {/* Alt bölüm: sol değerler + sağ liste */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, flex: 1, minHeight: 0 }}>
-          <div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginTop: 6, flexShrink: 0 }}>
+          <div style={{ paddingTop: ETIKET_H }}>
             <table style={{ width: '100%', borderCollapse: 'collapse' }}>
               <tbody>
                 {sol.map((x) => (
@@ -266,7 +275,14 @@ export default function A5Report({ open, onClose, date, data, metrics }) {
             </table>
           </div>
 
-          <div style={{ border: `1px solid ${GRID}`, padding: '3px 5px', overflow: 'hidden' }}>
+          <div>
+            {/* "Masraflar" etiketi yalnızca sağdaki masraf sütunlarının üstünde */}
+            <div style={{ height: ETIKET_H, display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, fontWeight: 800 }}>
+              <span style={{ flex: 1, borderTop: `1.5px dashed ${GRID}` }} />
+              <span>Masraflar</span>
+              <span style={{ flex: 1, borderTop: `1.5px dashed ${GRID}` }} />
+            </div>
+            <div style={{ border: `1px solid ${GRID}`, padding: '3px 5px', overflow: 'hidden' }}>
             <Grup baslik="Kurye" toplam={kurye.length ? sum(kurye) : undefined}>
               {kurye.length ? kurye.map((k, i) => <Satir key={i} ad={k.ad} tutar={k.v} />) : <Satir ad="—" tutar={0} soluk />}
             </Grup>
@@ -279,8 +295,59 @@ export default function A5Report({ open, onClose, date, data, metrics }) {
             <Grup baslik="Masraf (KK · harici)" toplam={kkMasraf.length ? sum(kkMasraf) : undefined}>
               {kkMasraf.length ? kkMasraf.map((m, i) => <Satir key={i} ad={m.ad} tutar={m.v} />) : <Satir ad="—" tutar={0} soluk />}
             </Grup>
+            </div>
           </div>
         </div>
+
+        {/* Kasa akışı: devir + extra + satıştan gelen nakit = ara toplam; ara toplam − çıkışlar = kasa sonucu / sayım / fark */}
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', marginTop: 7 }}>
+          <colgroup>
+            <col /><col style={{ width: 14 }} /><col /><col style={{ width: 14 }} /><col /><col style={{ width: 14 }} /><col />
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={kasaTh()}>Devir</th><th style={opTd()} />
+              <th style={kasaTh()}>Extra konan nakit</th><th style={opTd()} />
+              <th style={kasaTh()}>Satıştan gelen nakit</th><th style={opTd()} />
+              <th style={kasaTh({ background: '#e2e8f0' })}>Ara toplam</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={kasaTd()}>{tl(kasa.devir)}</td><td style={opTd()}>+</td>
+              <td style={kasaTd()}>{tl(kasa.extra)}</td><td style={opTd()}>+</td>
+              <td style={kasaTd()}>{tl(kasa.satisNakit)}</td><td style={opTd()}>=</td>
+              <td style={kasaTd({ fontWeight: 900, background: '#f1f5f9' })}>{tl(kasa.araToplam)}</td>
+            </tr>
+          </tbody>
+        </table>
+
+        <table style={{ width: '100%', borderCollapse: 'collapse', tableLayout: 'fixed', marginTop: 5 }}>
+          <colgroup>
+            <col /><col style={{ width: 14 }} /><col style={{ width: '27%' }} /><col style={{ width: 14 }} /><col /><col /><col />
+          </colgroup>
+          <thead>
+            <tr>
+              <th style={kasaTh({ background: '#e2e8f0' })}>Ara toplam</th><th style={opTd()} />
+              <th style={kasaTh()}>Çıkışlar (nakit masraf + kurye + net bahşiş)</th><th style={opTd()} />
+              <th style={kasaTh({ background: '#e2e8f0' })}>Kasa sonucu</th>
+              <th style={kasaTh()}>Sayım (fiziki)</th>
+              <th style={kasaTh()}>Kasa farkı</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td style={kasaTd()}>{tl(kasa.araToplam)}</td><td style={opTd()}>−</td>
+              <td style={kasaTd()}>{tl(kasa.cikislar)}</td><td style={opTd()}>=</td>
+              <td style={kasaTd({ fontWeight: 900, background: '#f1f5f9' })}>{tl(kasa.sonuc)}</td>
+              <td style={kasaTd({ fontWeight: 900 })}>{tl(kasa.sayim)}</td>
+              <td style={kasaTd({ fontWeight: 900, color: Math.abs(kasa.fark) <= 0.05 ? '#047857' : '#be123c' })}>
+                {Math.abs(kasa.fark) <= 0.05 ? '✓ Tam' : tl(Math.abs(kasa.fark))}
+                <div style={{ fontSize: 7.5, fontWeight: 700 }}>{Math.abs(kasa.fark) <= 0.05 ? '' : kasa.fark < 0 ? 'KASA AÇIK' : 'KASA FAZLA'}</div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
 
         <div style={{ marginTop: 'auto', paddingTop: 3, borderTop: `1px solid ${GRID}`, fontSize: 7.5, color: MUTE, display: 'flex', justifyContent: 'space-between' }}>
           <span>YRN Kasa · {longDate}</span>
